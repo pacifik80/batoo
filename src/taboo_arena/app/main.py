@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import html
-import json
 import queue
 import random
 import re
@@ -24,6 +23,7 @@ from taboo_arena.app.bootstrap import (
     load_app_settings,
 )
 from taboo_arena.app.jobs import ActiveJob, start_batch_job, start_single_round_job
+from taboo_arena.app.session_facade import SessionFacade
 from taboo_arena.app.state import (
     applied_generation_params,
     choose_default_model_id,
@@ -34,11 +34,13 @@ from taboo_arena.app.state import (
     recommended_generation_defaults,
     sync_selected_model_generation_defaults,
 )
-from taboo_arena.app.transcript import (
-    TranscriptMessage,
-    build_transcript_messages,
-    latest_round_events,
-    merge_transcript_event_sources,
+from taboo_arena.app.ui_stats_panel import render_round_pulse_inline
+from taboo_arena.app.ui_theme import apply_theme
+from taboo_arena.app.ui_transcript_panel import (
+    active_transcript_placeholder,
+    archive_current_logger_for_transcript,
+    live_logger_events,
+    render_transcript_panel_content,
 )
 from taboo_arena.config import AppSettings, BackendName, GenerationParams, RoleName
 from taboo_arena.logging.run_logger import RunLogger
@@ -79,16 +81,27 @@ def _active_run_present() -> bool:
     return st.session_state.active_job is not None
 
 
+def _live_logger_events(current_logger: RunLogger) -> list[dict[str, Any]]:
+    """Compatibility wrapper for existing tests and local helpers."""
+    return live_logger_events(current_logger)
+
+
+def _active_transcript_placeholder(current_logger: RunLogger | None) -> str:
+    """Compatibility wrapper for existing tests and local helpers."""
+    return active_transcript_placeholder(current_logger)
+
+
 def _render_live_dashboard(
     *,
     registry: ModelRegistry,
     model_manager: ModelManager,
 ) -> None:
+    session = SessionFacade(st.session_state)
     _poll_active_job_updates()
     settings = _settings_from_session(load_app_settings())
     deck = _ensure_deck(settings)
     _prepare_card_selection_state(deck)
-    current_logger = cast(RunLogger | None, st.session_state.current_logger)
+    current_logger = session.current_logger
     if current_logger is not None:
         model_manager.logger = current_logger
     runtime_diagnostics = get_runtime_diagnostics()
@@ -103,9 +116,9 @@ def _render_live_dashboard(
         current_logger,
     )
     sync_selected_model_generation_defaults(st.session_state, selected_models)
-    st.session_state.start_batch_clicked = False
-    if st.session_state.current_error_message:
-        st.error(str(st.session_state.current_error_message))
+    session.start_batch_clicked = False
+    if session.current_error_message:
+        st.error(str(session.current_error_message))
     _render_main_body(deck, selected_models, model_manager)
     if _finalize_active_job_if_needed():
         st.rerun()
@@ -114,494 +127,11 @@ def _render_live_dashboard(
 def main() -> None:
     """Render the single-screen app."""
     initialize_session_state(st.session_state, load_app_settings())
-    _apply_theme()
+    apply_theme()
 
     registry = build_registry()
     model_manager = get_persistent_model_manager()
     _render_live_dashboard(registry=registry, model_manager=model_manager)
-
-
-def _apply_theme() -> None:
-    st.markdown(
-        """
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Spectral:wght@600;700&display=swap');
-        :root {
-          --bg-top: #f6f1df;
-          --bg-bottom: #efe1b7;
-          --panel: rgba(255, 249, 235, 0.92);
-          --ink: #18281d;
-          --muted: #5e6d59;
-          --accent: #126b52;
-          --accent-soft: #dbeee6;
-          --warn: #914d14;
-          --warn-soft: #fff0dd;
-        }
-        .stApp {
-          background:
-            radial-gradient(circle at top left, rgba(18,107,82,0.12), transparent 32%),
-            radial-gradient(circle at top right, rgba(190,120,42,0.15), transparent 28%),
-            linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
-          color: var(--ink);
-          font-family: "Space Grotesk", "Aptos", sans-serif;
-        }
-        .block-container {
-          padding-top: 0.2rem;
-          padding-bottom: 0.45rem;
-          padding-left: 0.9rem;
-          padding-right: 0.9rem;
-          max-width: 100%;
-        }
-        header[data-testid="stHeader"],
-        [data-testid="stToolbar"],
-        [data-testid="stDecoration"],
-        .stAppToolbar,
-        #MainMenu,
-        footer {
-          display: none !important;
-        }
-        h1, h2, h3, .taboo-card-title {
-          font-family: "Spectral", Georgia, serif;
-          color: var(--ink);
-        }
-        .taboo-card, .taboo-panel {
-          background: var(--panel);
-          border: 1px solid rgba(24, 40, 29, 0.1);
-          border-radius: 18px;
-          padding: 1rem 1.1rem;
-          box-shadow: 0 10px 28px rgba(39, 47, 36, 0.08);
-        }
-        .soft-panel {
-          background: rgba(255, 249, 235, 0.78);
-          border: 1px solid rgba(24, 40, 29, 0.08);
-          border-radius: 20px;
-          padding: 0.95rem 1rem;
-          box-shadow: 0 8px 20px rgba(39, 47, 36, 0.05);
-        }
-        .taboo-card {
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,241,224,0.92));
-        }
-        .result-banner {
-          padding: 0.85rem 1rem;
-          border-radius: 16px;
-          margin-bottom: 0.85rem;
-          font-weight: 700;
-        }
-        .result-success {
-          background: var(--accent-soft);
-          color: var(--accent);
-        }
-        .result-fail {
-          background: var(--warn-soft);
-          color: var(--warn);
-        }
-        .metric-label {
-          color: var(--muted);
-          font-size: 0.88rem;
-        }
-        .metric-value {
-          font-size: 1.15rem;
-          font-weight: 700;
-        }
-        .hero-strip {
-          background: rgba(255, 249, 235, 0.9);
-          border: 1px solid rgba(24, 40, 29, 0.1);
-          border-radius: 22px;
-          padding: 0.95rem 1.1rem;
-          min-height: 104px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          box-shadow: 0 10px 28px rgba(39, 47, 36, 0.08);
-        }
-        .hero-title {
-          font-family: "Spectral", Georgia, serif;
-          font-size: 2.25rem;
-          line-height: 1;
-          font-weight: 700;
-          margin: 0;
-        }
-        .hero-subtitle {
-          color: var(--muted);
-          font-size: 0.9rem;
-          margin-top: 0.28rem;
-        }
-        .resource-card {
-          background: rgba(255, 249, 235, 0.9);
-          border: 1px solid rgba(24, 40, 29, 0.1);
-          border-radius: 20px;
-          padding: 0.75rem 0.9rem;
-          height: 122px;
-          box-shadow: 0 8px 18px rgba(39, 47, 36, 0.06);
-        }
-        .resource-body {
-          display: flex;
-          align-items: center;
-          height: 100%;
-          gap: 0.55rem;
-        }
-        .resource-spark {
-          flex: 1 1 auto;
-          min-width: 0;
-        }
-        .resource-spark svg {
-          width: 100%;
-          height: 52px;
-          display: block;
-        }
-        .resource-values {
-          display: grid;
-          gap: 0.15rem;
-          align-content: center;
-          justify-items: end;
-          flex: 0 0 78px;
-        }
-        .resource-values span {
-          font-size: 0.86rem;
-          color: var(--muted);
-        }
-        .resource-values strong {
-          font-size: 1rem;
-          color: var(--ink);
-        }
-        .role-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.7rem;
-          margin-bottom: 0.55rem;
-        }
-        .role-meta {
-          display: grid;
-          gap: 0.2rem;
-        }
-        .role-name {
-          font-size: 1.1rem;
-          font-weight: 700;
-          line-height: 1.05;
-        }
-        .role-state {
-          display: inline-flex;
-          width: fit-content;
-          padding: 0.2rem 0.48rem;
-          border-radius: 999px;
-          font-size: 0.72rem;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          background: rgba(24, 40, 29, 0.08);
-          color: var(--muted);
-        }
-        .role-avatar {
-          width: 58px;
-          height: 58px;
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.9rem;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
-        }
-        .avatar-cluer {
-          background: linear-gradient(180deg, #f7d8d1, #efb3a4);
-          color: #8b3d29;
-        }
-        .avatar-guesser {
-          background: linear-gradient(180deg, #e4edff, #bfd2ff);
-          color: #2a4e98;
-        }
-        .avatar-judge {
-          background: linear-gradient(180deg, #eee4ff, #d9c8ff);
-          color: #5d3d9d;
-        }
-        .avatar-sleep {
-          opacity: 0.55;
-          filter: saturate(0.7);
-        }
-        .avatar-thinking {
-          animation: pulsefloat 1.15s ease-in-out infinite;
-        }
-        @keyframes pulsefloat {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-2px) scale(1.03); }
-          100% { transform: translateY(0px); }
-        }
-        .role-note {
-          font-size: 0.84rem;
-          color: var(--muted);
-          margin-top: 0.1rem;
-        }
-        .game-card-shell {
-          max-width: 320px;
-          min-height: 420px;
-          margin: 0 auto 0.7rem;
-          padding: 0.8rem;
-          background: linear-gradient(180deg, #fff5ea, #fde8bc);
-          border: 4px solid #cf5d46;
-          border-radius: 28px;
-          box-shadow: 0 12px 30px rgba(39, 47, 36, 0.1);
-          display: flex;
-          flex-direction: column;
-          gap: 0.8rem;
-        }
-        .game-card-top {
-          border-radius: 22px;
-          padding: 1rem 0.95rem 1.1rem;
-          background: linear-gradient(180deg, #d86a54, #bd4632);
-          text-align: center;
-        }
-        .game-card-title {
-          font-size: 0.74rem;
-          text-transform: uppercase;
-          letter-spacing: 0.22em;
-          color: rgba(255, 250, 240, 0.86);
-          margin-bottom: 0.5rem;
-        }
-        .game-card-target {
-          font-family: "Spectral", Georgia, serif;
-          font-size: 2rem;
-          line-height: 1.05;
-          color: #fffdf7;
-          margin-bottom: 0.2rem;
-        }
-        .game-card-kind {
-          color: rgba(255, 250, 240, 0.78);
-          font-size: 0.84rem;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-        }
-        .game-card-taboo-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 0.55rem;
-          flex: 1;
-        }
-        .game-card-taboo {
-          border-radius: 16px;
-          padding: 0.7rem 0.65rem;
-          background: rgba(255, 252, 246, 0.92);
-          border: 1px solid rgba(145, 77, 20, 0.12);
-          color: #7e4617;
-          font-weight: 700;
-          font-size: 1rem;
-          text-align: center;
-        }
-        .game-card-footer {
-          margin-top: auto;
-          padding-top: 0.35rem;
-          color: var(--muted);
-          font-size: 0.82rem;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          text-align: center;
-        }
-        .st-key-random_card_icon button,
-        .st-key-open_app_settings button,
-        .st-key-cluer_settings_button button,
-        .st-key-guesser_settings_button button,
-        .st-key-judge_settings_button button {
-          min-height: 2.35rem;
-          height: 2.35rem;
-          padding: 0 0.35rem;
-          border-radius: 999px;
-          font-size: 1.05rem;
-          font-weight: 700;
-        }
-        .st-key-random_card_icon button {
-          background: rgba(207, 93, 70, 0.12);
-          color: #9a3f2c;
-          border: 1px solid rgba(207, 93, 70, 0.22);
-          min-height: 3.4rem;
-          height: 3.4rem;
-          width: 100%;
-          border-radius: 20px;
-        }
-        .st-key-open_app_settings button,
-        .st-key-cluer_settings_button button,
-        .st-key-guesser_settings_button button,
-        .st-key-judge_settings_button button {
-          background: rgba(24, 40, 29, 0.06);
-          color: var(--ink);
-          border: 1px solid rgba(24, 40, 29, 0.12);
-        }
-        .section-heading {
-          font-size: 0.82rem;
-          text-transform: uppercase;
-          letter-spacing: 0.16em;
-          color: var(--muted);
-          margin-bottom: 0.5rem;
-        }
-        .pulse-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 0.5rem;
-          margin-bottom: 0.55rem;
-        }
-        .metrics-group {
-          margin-bottom: 0.7rem;
-        }
-        .metrics-group-title {
-          color: var(--muted);
-          font-size: 0.72rem;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          margin-bottom: 0.32rem;
-        }
-        .pulse-card {
-          border-radius: 16px;
-          padding: 0.55rem 0.65rem;
-          background: rgba(255, 249, 235, 0.86);
-          border: 1px solid rgba(24, 40, 29, 0.08);
-        }
-        .pulse-card-label {
-          color: var(--muted);
-          font-size: 0.68rem;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 0.14rem;
-        }
-        .pulse-card-value {
-          color: var(--ink);
-          font-size: 1.02rem;
-          font-weight: 700;
-          line-height: 1.05;
-        }
-        .subtle-note {
-          color: var(--muted);
-          font-size: 0.84rem;
-        }
-        .fit-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 0.65rem;
-          margin-bottom: 0.75rem;
-        }
-        .fit-card {
-          border-radius: 16px;
-          padding: 0.7rem 0.8rem;
-          background: rgba(255, 249, 235, 0.88);
-          border: 1px solid rgba(24, 40, 29, 0.1);
-        }
-        .fit-card-label {
-          color: var(--muted);
-          font-size: 0.76rem;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 0.28rem;
-        }
-        .fit-card-value {
-          color: var(--ink);
-          font-size: 1.25rem;
-          font-weight: 700;
-          line-height: 1.05;
-        }
-        .compact-hint {
-          color: var(--muted);
-          font-size: 0.83rem;
-        }
-        .transcript-wrap {
-          display: flex;
-          flex-direction: column;
-          gap: 0.42rem;
-          padding-top: 0.25rem;
-        }
-        .transcript-row {
-          display: flex;
-          width: 100%;
-        }
-        .transcript-row.left {
-          justify-content: flex-start;
-        }
-        .transcript-row.center {
-          justify-content: center;
-        }
-        .transcript-row.right {
-          justify-content: flex-end;
-        }
-        .transcript-bubble {
-          border-radius: 18px;
-          padding: 0.8rem 0.95rem;
-          border: 1px solid rgba(24, 40, 29, 0.08);
-          box-shadow: 0 8px 18px rgba(39, 47, 36, 0.06);
-          line-height: 1.45;
-          white-space: pre-wrap;
-        }
-        .transcript-meta {
-          width: auto !important;
-          max-width: 100%;
-          padding: 0.15rem 0.35rem;
-          border: none;
-          box-shadow: none;
-          background: transparent;
-          color: var(--muted);
-          font-size: 0.88rem;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-        }
-        .transcript-pending {
-          background: rgba(215, 213, 206, 0.92);
-          color: #38443a;
-        }
-        .transcript-rejected {
-          background: #f4d6d1;
-          color: #7d281c;
-        }
-        .transcript-accepted {
-          background: #f5e39c;
-          color: #5d4707;
-        }
-        .transcript-judge {
-          background: #e7dcff;
-          color: #523090;
-        }
-        .transcript-guess {
-          background: #d9e7ff;
-          color: #204b8c;
-        }
-        .transcript-success {
-          background: #d8efcd;
-          color: #25603d;
-        }
-        .transcript-label {
-          display: block;
-          margin-bottom: 0.28rem;
-          font-size: 0.8rem;
-          font-weight: 700;
-          letter-spacing: 0.02em;
-          opacity: 0.72;
-        }
-        .transcript-inline-bubble {
-          width: 57.1429%;
-          max-width: 57.1429%;
-        }
-        .prompt-modal-pre {
-          margin: 0;
-          padding: 0.9rem 1rem;
-          border-radius: 16px;
-          background: rgba(250, 248, 243, 0.95);
-          border: 1px solid rgba(24, 40, 29, 0.12);
-          color: var(--ink);
-          font-family: "Cascadia Code", "Consolas", monospace;
-          font-size: 0.82rem;
-          line-height: 1.45;
-          white-space: pre-wrap;
-          word-break: break-word;
-          overflow-wrap: anywhere;
-        }
-        @media (max-width: 1100px) {
-          .pulse-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-          .transcript-inline-bubble {
-            width: min(100%, 92%);
-            max-width: min(100%, 92%);
-          }
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
 
 def _settings_from_session(settings: AppSettings) -> AppSettings:
     settings.dataset.source_ref = str(st.session_state.source_ref)
@@ -1748,8 +1278,9 @@ def _render_main_body(
     registry = build_registry()
     _maybe_process_actions(settings, registry, model_manager, deck, selected_models)
 
-    logger = cast(RunLogger | None, st.session_state.current_logger)
-    current_result = st.session_state.current_result
+    session = SessionFacade(st.session_state)
+    logger = session.current_logger
+    current_result = session.current_result
 
     with middle_col:
         transcript_slot = st.empty()
@@ -1758,9 +1289,11 @@ def _render_main_body(
         else:
             with transcript_slot.container(border=True):
                 st.markdown("<div class='section-heading'>Chat / transcript</div>", unsafe_allow_html=True)
-                _render_transcript_panel_content(
+                render_transcript_panel_content(
+                    session=session,
                     logger=logger,
                     current_result=current_result,
+                    active_run_present=False,
                 )
 
     with right_col:
@@ -1770,10 +1303,12 @@ def _render_main_body(
         else:
             with metrics_slot.container(border=True):
                 st.markdown("<div class='section-heading'>Metrics</div>", unsafe_allow_html=True)
-                _render_round_pulse_inline(
+                render_round_pulse_inline(
+                    session=session,
                     logger=logger,
                     selected_models=selected_models,
                     model_manager=model_manager,
+                    current_events=[] if logger is None else live_logger_events(logger),
                 )
     if _active_run_present():
         _render_live_round_panels(
@@ -1792,270 +1327,32 @@ def _render_live_round_panels(
     selected_models: dict[str, ModelEntry],
     model_manager: ModelManager,
 ) -> None:
+    session = SessionFacade(st.session_state)
     _poll_active_job_updates()
-    logger = cast(RunLogger | None, st.session_state.current_logger)
-    current_result = st.session_state.current_result
+    logger = session.current_logger
+    current_result = session.current_result
     transcript_slot.empty()
     metrics_slot.empty()
     with transcript_slot.container(border=True):
         st.markdown("<div class='section-heading'>Chat / transcript</div>", unsafe_allow_html=True)
-        _render_transcript_panel_content(
+        render_transcript_panel_content(
+            session=session,
             logger=logger,
             current_result=current_result,
+            active_run_present=True,
         )
     with metrics_slot.container(border=True):
         st.markdown("<div class='section-heading'>Metrics</div>", unsafe_allow_html=True)
-        _render_round_pulse_inline(
+        render_round_pulse_inline(
+            session=session,
             logger=logger,
             selected_models=selected_models,
             model_manager=model_manager,
+            current_events=[] if logger is None else live_logger_events(logger),
             allow_export_widget=False,
         )
     if _finalize_active_job_if_needed():
         st.rerun()
-
-
-def _render_round_pulse_inline(
-    *,
-    logger: RunLogger | None,
-    selected_models: dict[str, ModelEntry],
-    model_manager: ModelManager,
-    allow_export_widget: bool = True,
-) -> None:
-    session_round_summaries, session_events = _session_metric_inputs(logger)
-    if logger is None and not session_round_summaries:
-        st.markdown(
-            "<div class='subtle-note'>Run metrics and export appear here after the first round.</div>",
-            unsafe_allow_html=True,
-        )
-        return
-
-    shared_models = len({entry.repo_id for entry in selected_models.values()})
-    current_round_summaries = [] if logger is None else logger.snapshot_round_summaries()
-    current_events = [] if logger is None else _live_logger_events(logger)
-
-    round_tab, session_tab = st.tabs(["Round metrics", "Session metrics"])
-    with round_tab:
-        if not current_round_summaries and current_events:
-            _render_live_round_metric_groups(
-                events=current_events,
-                shared_models=shared_models,
-                loaded_model_count=len(model_manager.loaded_models),
-            )
-        elif not current_round_summaries:
-            st.caption("Round metrics will populate after the current round finishes.")
-        else:
-            _render_metric_groups(
-                round_summaries=current_round_summaries,
-                events=current_events,
-                shared_models=shared_models,
-                loaded_model_count=len(model_manager.loaded_models),
-            )
-
-    with session_tab:
-        if not session_round_summaries:
-            st.caption("Session metrics will accumulate here as you play rounds.")
-        else:
-            _render_metric_groups(
-                round_summaries=session_round_summaries,
-                events=session_events,
-                shared_models=shared_models,
-                loaded_model_count=len(model_manager.loaded_models),
-            )
-
-    warnings = [] if logger is None else logger.latest_errors()
-    if warnings:
-        st.warning(warnings[-1])
-
-    st.caption(
-        f"{shared_models} unique model repo(s) selected. "
-        f"Loaded now: {len(model_manager.loaded_models)}."
-    )
-    if logger is not None and allow_export_widget:
-        st.download_button(
-            "Export",
-            data=logger.export_run_archive(),
-            file_name=f"{logger.run_id}.zip",
-            mime="application/zip",
-            width="stretch",
-        )
-
-
-def _render_live_round_metric_groups(
-    *,
-    events: list[dict[str, Any]],
-    shared_models: int,
-    loaded_model_count: int,
-) -> None:
-    if not events:
-        st.caption("Round metrics will populate after the current round starts.")
-        return
-
-    last_event = events[-1]
-    clue_drafts = [event for event in events if event.get("event_type") == "clue_draft_generated"]
-    guesses = [event for event in events if event.get("event_type") == "guess_generated"]
-    warnings = [
-        event
-        for event in events
-        if event.get("event_type") == "llm_validation_completed"
-        and event.get("final_judge_verdict") == "pass_with_warning"
-    ]
-    rejections = [event for event in events if event.get("event_type") == "clue_repair_requested"]
-    latencies = [
-        float(cast(int | float, event.get("latency_ms")))
-        for event in events
-        if isinstance(event.get("latency_ms"), (int, float))
-    ]
-    grouped_cards = [
-        (
-            "Live overview",
-            [
-                ("State", str(last_event.get("state", "starting"))),
-                ("Attempt", str(last_event.get("attempt_no", 0) or 0)),
-                ("Repairs", str(len(clue_drafts))),
-                ("Loaded now", str(loaded_model_count)),
-            ],
-        ),
-        (
-            "Live flow",
-            [
-                ("Clues drafted", str(len(clue_drafts))),
-                ("Repairs asked", str(len(rejections))),
-                ("Guesses made", str(len(guesses))),
-                ("Judge warnings", str(len(warnings))),
-            ],
-        ),
-        (
-            "Runtime",
-            [
-                ("Events", str(len(events))),
-                ("Last event", str(last_event.get("event_type", "n/a"))),
-                ("Latency seen", _format_ms(sum(latencies)) if latencies else "n/a"),
-                ("Unique repos", str(shared_models)),
-            ],
-        ),
-    ]
-    metrics_html = "".join(_metric_group_html(title, items) for title, items in grouped_cards)
-    st.markdown(metrics_html, unsafe_allow_html=True)
-
-
-def _render_metric_groups(
-    *,
-    round_summaries: list[Any],
-    events: list[dict[str, Any]],
-    shared_models: int,
-    loaded_model_count: int,
-) -> None:
-    summary = compute_summary_metrics(round_summaries, events)
-    latency_summary = _latency_summary(summary, round_summaries)
-    grouped_cards = [
-        (
-            "Overview",
-            [
-                ("Rounds", str(summary["rounds_played"])),
-                ("Solve rate", _format_ratio(summary["solve_rate_within_3"])),
-                ("Loaded now", str(loaded_model_count)),
-                ("Unique repos", str(shared_models)),
-            ],
-        ),
-        (
-            "Clue Flow",
-            [
-                ("First draft pass", _format_ratio(summary["first_draft_clue_pass_rate"])),
-                ("Repair success", _format_ratio(summary["repaired_clue_success_rate"])),
-                ("Clue fail rate", _format_ratio(summary["clue_total_failure_rate"])),
-                ("Avg repairs", f"{float(summary['average_repairs_per_round']):.2f}"),
-            ],
-        ),
-        (
-            "Guessing",
-            [
-                ("Solve on 1", _format_ratio(summary["solve_on_attempt_1_rate"])),
-                ("Solve on 2", _format_ratio(summary["solve_on_attempt_2_rate"])),
-                ("Solve on 3", _format_ratio(summary["solve_on_attempt_3_rate"])),
-                ("Wrong before solve", f"{float(summary['average_wrong_guesses_before_success']):.2f}"),
-            ],
-        ),
-        (
-            "Judging",
-            [
-                ("Logical fail", _format_ratio(summary["logical_fail_rate"])),
-                ("LLM fail", _format_ratio(summary["llm_judge_fail_rate"])),
-                ("Disagreement", _format_ratio(summary["judge_disagreement_rate"])),
-                ("Total repairs", str(int(summary["total_clue_repairs"]))),
-            ],
-        ),
-        (
-            "Latency",
-            [
-                ("Cluer avg", latency_summary["cluer"]),
-                ("Guesser avg", latency_summary["guesser"]),
-                ("Judge avg", latency_summary["judge"]),
-                ("Round avg", latency_summary["round"]),
-            ],
-        ),
-    ]
-    metrics_html = "".join(_metric_group_html(title, items) for title, items in grouped_cards)
-    st.markdown(metrics_html, unsafe_allow_html=True)
-
-
-def _metric_group_html(title: str, items: list[tuple[str, str]]) -> str:
-    cards_html = "".join(
-        (
-            "<div class='pulse-card'>"
-            f"<div class='pulse-card-label'>{html.escape(label)}</div>"
-            f"<div class='pulse-card-value'>{html.escape(value)}</div>"
-            "</div>"
-        )
-        for label, value in items
-    )
-    return (
-        "<div class='metrics-group'>"
-        f"<div class='metrics-group-title'>{html.escape(title)}</div>"
-        f"<div class='pulse-grid'>{cards_html}</div>"
-        "</div>"
-    )
-
-
-def _session_metric_inputs(current_logger: RunLogger | None) -> tuple[list[Any], list[dict[str, Any]]]:
-    archived_summaries = list(st.session_state.session_history_round_summaries)
-    archived_events = cast(list[dict[str, Any]], st.session_state.transcript_history_events)
-    if current_logger is None:
-        return archived_summaries, archived_events
-    return [
-        *archived_summaries,
-        *current_logger.snapshot_round_summaries(),
-    ], [
-        *archived_events,
-        *_live_logger_events(current_logger),
-    ]
-
-
-def _latency_summary(summary: dict[str, Any], round_summaries: list[Any]) -> dict[str, str]:
-    role_latencies = cast(dict[str, float], summary.get("average_latency_per_role", {}))
-    round_latencies = [float(row.total_latency_ms) for row in round_summaries]
-    round_average = sum(round_latencies) / len(round_latencies) if round_latencies else 0.0
-    return {
-        "cluer": _format_ms(role_latencies.get("cluer")),
-        "guesser": _format_ms(role_latencies.get("guesser")),
-        "judge": _format_ms(role_latencies.get("judge")),
-        "round": _format_ms(round_average if round_latencies else None),
-    }
-
-
-def _format_ratio(value: Any) -> str:
-    try:
-        return f"{float(value) * 100:.0f}%"
-    except (TypeError, ValueError):
-        return "n/a"
-
-
-def _format_ms(value: Any) -> str:
-    try:
-        return f"{float(value):.0f} ms"
-    except (TypeError, ValueError):
-        return "n/a"
-
 
 def _compact_prompt_preview(prompt_text: str) -> str:
     normalized = prompt_text.replace("\r\n", "\n").replace("\r", "\n")
@@ -2165,154 +1462,6 @@ def _game_card_html(card: Any) -> str:
         ]
     )
 
-
-def _transcript_source_events(current_logger: RunLogger | None) -> list[dict[str, Any]]:
-    if current_logger is not None:
-        current_events = _live_logger_events(current_logger)
-        current_round_events = latest_round_events(current_events)
-        if any(str(event.get("round_id", "")).strip() for event in current_round_events):
-            return current_round_events
-
-    history_events = cast(list[dict[str, Any]], st.session_state.transcript_history_events)
-    archived_run_ids = cast(list[str], st.session_state.transcript_history_run_ids)
-    current_events = [] if current_logger is None else _live_logger_events(current_logger)
-    current_run_id = None if current_logger is None else current_logger.run_id
-    merged_events = merge_transcript_event_sources(
-        history_events=history_events,
-        current_events=current_events,
-        archived_run_ids=archived_run_ids,
-        current_run_id=current_run_id,
-    )
-    return latest_round_events(merged_events)
-
-
-def _render_transcript_panel_content(
-    *,
-    logger: RunLogger | None,
-    current_result: Any,
-) -> None:
-    transcript_messages = build_transcript_messages(_transcript_source_events(logger))
-    if current_result is not None:
-        _render_result_banner(current_result)
-    if not transcript_messages:
-        if _active_run_present():
-            st.info(_active_transcript_placeholder(logger))
-        elif current_result is None:
-            st.info("Press Start to run the selected card here.")
-        return
-    _render_transcript_messages(transcript_messages)
-
-
-def _live_logger_events(current_logger: RunLogger) -> list[dict[str, Any]]:
-    in_memory_events = current_logger.snapshot_events()
-    try:
-        if current_logger.events_path.exists():
-            file_events: list[dict[str, Any]] = []
-            with current_logger.events_path.open("r", encoding="utf-8") as handle:
-                for line in handle:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        payload = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-                    if isinstance(payload, dict):
-                        file_events.append(payload)
-            if len(file_events) > len(in_memory_events):
-                return file_events
-            if in_memory_events:
-                return in_memory_events
-            if file_events:
-                return file_events
-    except OSError:
-        pass
-    return in_memory_events
-
-
-def _active_transcript_placeholder(current_logger: RunLogger | None) -> str:
-    if current_logger is None:
-        return "Starting the round..."
-    logger_events = current_logger.snapshot_events()
-    if not logger_events:
-        return "Starting the round..."
-
-    last_event = logger_events[-1]
-    event_type = str(last_event.get("event_type", "")).strip()
-    if event_type == "app_started":
-        return "Starting the round..."
-    if event_type == "round_started":
-        return "Round started. Preparing the first clue..."
-    if event_type == "model_download_started":
-        return "Downloading model files..."
-    if event_type == "model_load_started":
-        return "Loading model weights into memory..."
-    if event_type == "clue_draft_started":
-        return "Cluer is drafting a clue..."
-    if event_type == "logical_validation_completed":
-        return "Judge is reviewing the clue..."
-    if event_type == "clue_review_started":
-        return "Judge is reviewing the clue..."
-    if event_type == "guess_started":
-        return "Guesser is preparing an answer..."
-    if event_type == "clue_repair_requested":
-        return "Cluer is repairing the rejected clue..."
-    return "Round is in progress..."
-
-
-def _archive_current_logger_for_transcript() -> None:
-    current_logger = cast(RunLogger | None, st.session_state.current_logger)
-    if current_logger is None:
-        return
-    archived_run_ids = cast(list[str], st.session_state.transcript_history_run_ids)
-    if current_logger.run_id in archived_run_ids:
-        return
-    history_events = cast(list[dict[str, Any]], st.session_state.transcript_history_events)
-    st.session_state.transcript_history_events = [*history_events, *current_logger.snapshot_events()]
-    history_summaries = list(st.session_state.session_history_round_summaries)
-    st.session_state.session_history_round_summaries = [
-        *history_summaries,
-        *current_logger.snapshot_round_summaries(),
-    ]
-    st.session_state.transcript_history_run_ids = [*archived_run_ids, current_logger.run_id]
-
-
-def _render_result_banner(result: Any) -> None:
-    if result.solved:
-        text = f"Solved on attempt {result.solved_on_attempt}"
-        css_class = "result-banner result-success"
-    elif result.terminal_reason == "clue_not_repaired":
-        text = "Round ended: clue_not_repaired"
-        css_class = "result-banner result-fail"
-    else:
-        text = f"Failed after {int(result.total_guess_attempts_used)} guesses"
-        css_class = "result-banner result-fail"
-    st.markdown(f"<div class='{css_class}'>{text}</div>", unsafe_allow_html=True)
-
-
-def _render_transcript_messages(messages: list[TranscriptMessage]) -> None:
-    if not messages:
-        return
-    transcript_html = "".join(_transcript_message_html(message) for message in messages)
-    st.markdown(f"<div class='transcript-wrap'>{transcript_html}</div>", unsafe_allow_html=True)
-
-
-def _transcript_message_html(message: TranscriptMessage) -> str:
-    bubble_class = "transcript-meta" if message.tone == "meta" else f"transcript-{message.tone}"
-    label_html = (
-        f"<span class='transcript-label'>{html.escape(message.label)}</span>"
-        if message.tone != "meta"
-        else ""
-    )
-    bubble_html = (
-        f"<div class='transcript-bubble {bubble_class} transcript-inline-bubble'>"
-        f"{label_html}{html.escape(message.text)}</div>"
-    )
-    if message.tone == "meta":
-        return f"<div class='transcript-row center'>{bubble_html}</div>"
-    return f"<div class='transcript-row {message.alignment}'>{bubble_html}</div>"
-
-
 def _maybe_process_actions(
     settings: AppSettings,
     registry: ModelRegistry,
@@ -2320,6 +1469,7 @@ def _maybe_process_actions(
     deck: Any,
     selected_models: dict[str, ModelEntry],
 ) -> None:
+    session = SessionFacade(st.session_state)
     if st.session_state.start_round_clicked:
         if not _validate_model_selection(selected_models):
             return
@@ -2330,19 +1480,19 @@ def _maybe_process_actions(
         if current_card is None:
             st.error("Enable at least one category before starting a round.")
             return
-        _archive_current_logger_for_transcript()
+        archive_current_logger_for_transcript(session)
         logger = build_logger(
             settings.run.log_dir,
             console_trace=settings.run.console_trace,
         )
         logger.emit("app_started", state="idle")
         model_manager.logger = logger
-        st.session_state.current_logger = logger
+        session.current_logger = logger
         st.session_state.current_state = "generating_clue"
-        st.session_state.current_error_message = None
+        session.current_error_message = None
         st.session_state.stop_requested = False
-        st.session_state.current_result = None
-        st.session_state.active_job = start_single_round_job(
+        session.current_result = None
+        session.active_job = start_single_round_job(
             settings=settings,
             model_manager=model_manager,
             logger=logger,
@@ -2357,7 +1507,7 @@ def _maybe_process_actions(
         if _active_run_present():
             st.warning("A run is already in progress.")
             return
-        _archive_current_logger_for_transcript()
+        archive_current_logger_for_transcript(session)
         batch_model_ids = {
             "cluer": st.session_state.batch_cluer_ids or [st.session_state.cluer_model_id],
             "guesser": st.session_state.batch_guesser_ids or [st.session_state.guesser_model_id],
@@ -2385,12 +1535,12 @@ def _maybe_process_actions(
             for _ in range(int(st.session_state.batch_repeats_per_card))
             for card in cards
         ]
-        st.session_state.current_logger = logger
-        st.session_state.current_result = None
+        session.current_logger = logger
+        session.current_result = None
         st.session_state.current_state = "batch_running"
-        st.session_state.current_error_message = None
+        session.current_error_message = None
         st.session_state.stop_requested = False
-        st.session_state.active_job = start_batch_job(
+        session.active_job = start_batch_job(
             settings=settings,
             model_manager=model_manager,
             logger=logger,

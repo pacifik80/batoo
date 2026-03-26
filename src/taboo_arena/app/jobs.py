@@ -11,10 +11,10 @@ from typing import Any, Literal
 
 from taboo_arena.cards.schemas import CardRecord
 from taboo_arena.config import AppSettings
-from taboo_arena.engine import RoundEngine, RoundResult
+from taboo_arena.engine import BatchRunner, RoundEngine, RoundResult
+from taboo_arena.engine.batch import ExpandedBatchTask
 from taboo_arena.logging.run_logger import RunLogger
 from taboo_arena.models import ModelEntry, ModelManager, ModelRegistry
-from taboo_arena.utils.ids import new_batch_id
 
 
 @dataclass(slots=True)
@@ -150,33 +150,6 @@ def _single_round_process_target(
         update_queue.put({"type": "completed"})
 
 
-def _single_round_target(
-    *,
-    job: ActiveJob,
-    settings: AppSettings,
-    model_manager: ModelManager,
-    logger: RunLogger,
-    card: Any,
-    cluer_entry: ModelEntry,
-    guesser_entry: ModelEntry,
-    judge_entry: ModelEntry,
-) -> None:
-    engine = RoundEngine(model_manager=model_manager, logger=logger, settings=settings.run)
-    model_manager.logger = logger
-    try:
-        job.result = engine.play_round(
-            card=card,
-            cluer_entry=cluer_entry,
-            guesser_entry=guesser_entry,
-            judge_entry=judge_entry,
-        )
-    except Exception as exc:
-        logger.emit("error", error_message=str(exc), state="idle")
-        job.error_message = str(exc)
-    finally:
-        job.completed = True
-
-
 def _batch_target(
     *,
     job: ActiveJob,
@@ -189,32 +162,24 @@ def _batch_target(
 ) -> None:
     engine = RoundEngine(model_manager=model_manager, logger=logger, settings=settings.run)
     model_manager.logger = logger
-    batch_id = new_batch_id()
+    batch_runner = BatchRunner(engine, logger)
+    expanded_tasks = [
+        ExpandedBatchTask(
+            card_id=task["card_id"],
+            cluer_model_id=task["cluer_model_id"],
+            guesser_model_id=task["guesser_model_id"],
+            judge_model_id=task["judge_model_id"],
+        )
+        for task in tasks
+    ]
 
     try:
-        logger.emit(
-            "batch_started",
-            batch_id=batch_id,
-            state="batch_running",
-            seed=settings.run.random_seed,
-            card_count=len(tasks),
-            combinations=len(tasks),
+        job.batch_results = batch_runner.run_expanded_tasks(
+            expanded_tasks,
+            registry=registry,
+            cards_by_id=cards_by_id,
+            stop_requested=lambda: job.stop_requested,
         )
-        for task in tasks:
-            if job.stop_requested:
-                logger.emit("stopped", batch_id=batch_id, state="stopped")
-                logger.emit("batch_finished", batch_id=batch_id, state="stopped")
-                break
-            result = engine.play_round(
-                card=cards_by_id[task["card_id"]],
-                cluer_entry=registry.get(task["cluer_model_id"]),
-                guesser_entry=registry.get(task["guesser_model_id"]),
-                judge_entry=registry.get(task["judge_model_id"]),
-                batch_id=batch_id,
-            )
-            job.batch_results.append(result)
-        else:
-            logger.emit("batch_finished", batch_id=batch_id, state="idle")
     except Exception as exc:
         logger.emit("error", error_message=str(exc), state="idle")
         job.error_message = str(exc)

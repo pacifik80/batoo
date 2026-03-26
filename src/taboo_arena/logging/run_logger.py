@@ -45,6 +45,7 @@ class RunLogger:
         self.round_summaries: list[RoundSummaryRecord] = []
         self.latest_prompt_by_role: dict[str, dict[str, Any]] = {}
         self.latest_response_by_role: dict[str, dict[str, Any]] = {}
+        self._artifacts_dirty = False
 
     def emit(self, event_type: str, **fields: Any) -> dict[str, Any]:
         """Record one event and append it to the JSONL log."""
@@ -68,14 +69,20 @@ class RunLogger:
                 pass
         return event
 
-    def record_round_summary(self, summary: RoundSummaryRecord) -> None:
-        """Append a round summary and refresh derived artifacts."""
+    def record_round_summary(self, summary: RoundSummaryRecord, *, flush: bool = True) -> None:
+        """Append a round summary and optionally refresh derived artifacts."""
         with self._lock:
             self.round_summaries.append(summary)
-        self.flush()
+            self._artifacts_dirty = True
+        if flush:
+            self.flush()
 
     def flush(self) -> None:
         """Write round tables and summary metrics."""
+        with self._lock:
+            should_flush = self._artifacts_dirty or not self.rounds_csv_path.exists()
+        if not should_flush:
+            return
         round_summaries = self.snapshot_round_summaries()
         events = self.snapshot_events()
         rounds_df = pd.DataFrame([item.model_dump(mode="json") for item in round_summaries])
@@ -105,6 +112,8 @@ class RunLogger:
 
         summary_rows = compute_summary_metrics(round_summaries, events)
         pd.DataFrame([summary_rows]).to_csv(self.summary_csv_path, index=False)
+        with self._lock:
+            self._artifacts_dirty = False
 
     def latest_errors(self, limit: int = 10) -> list[str]:
         """Return the newest error or warning messages."""
@@ -137,6 +146,7 @@ class RunLogger:
         """Append an externally produced round summary to in-memory state."""
         with self._lock:
             self.round_summaries.append(summary)
+            self._artifacts_dirty = True
 
     def export_run_archive(self) -> bytes:
         """Create a zip archive of the current run artifacts."""

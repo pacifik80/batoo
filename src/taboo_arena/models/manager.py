@@ -12,6 +12,7 @@ from huggingface_hub.errors import GatedRepoError
 
 from taboo_arena.config import DevicePreference, GenerationParams, MemoryPolicy
 from taboo_arena.models.backends import (
+    BackendRuntimeCapabilities,
     GenerationResponse,
     LlamaCppGenerator,
     ModelRuntimeError,
@@ -284,6 +285,30 @@ class ModelManager:
                 completion_tokens=response.completion_tokens,
             )
         return response
+
+    def runtime_capabilities(
+        self,
+        entry: ModelEntry,
+        *,
+        device_preference: DevicePreference = "auto",
+        runtime_policy: MemoryPolicy = "keep_loaded_if_possible",
+    ) -> BackendRuntimeCapabilities:
+        """Expose explicit runtime capabilities without changing generation behavior."""
+        if entry.backend == "transformers_safetensors":
+            supports_cpu_offload = bool(
+                device_preference != "cpu"
+                and runtime_policy == "keep_cpu_offloaded_if_possible"
+            )
+            return BackendRuntimeCapabilities(
+                backend_name=entry.backend,
+                supports_banned_phrase_enforcement=True,
+                supports_cpu_offload=supports_cpu_offload,
+            )
+        return BackendRuntimeCapabilities(
+            backend_name=entry.backend,
+            supports_banned_phrase_enforcement=False,
+            supports_cpu_offload=False,
+        )
 
     def assess_memory(
         self,

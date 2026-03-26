@@ -29,6 +29,15 @@ class GenerationResponse:
     prompt_template_id: str
 
 
+@dataclass(slots=True, frozen=True)
+class BackendRuntimeCapabilities:
+    """Explicit runtime capability flags for one backend family."""
+
+    backend_name: str
+    supports_banned_phrase_enforcement: bool
+    supports_cpu_offload: bool
+
+
 class TextGenerationBackend(Protocol):
     """Backend protocol shared by all model families."""
 
@@ -45,6 +54,9 @@ class TextGenerationBackend(Protocol):
 
     def supports_cpu_offload(self) -> bool:
         """Return whether the backend can keep weights in CPU RAM while inactive."""
+
+    def runtime_capabilities(self) -> BackendRuntimeCapabilities:
+        """Return explicit capability flags for the current backend runtime."""
 
     def activate_for_inference(self) -> None:
         """Move the backend into its active inference residency."""
@@ -247,6 +259,13 @@ class TransformersGenerator:
     def supports_cpu_offload(self) -> bool:
         return self._cpu_offload_enabled
 
+    def runtime_capabilities(self) -> BackendRuntimeCapabilities:
+        return BackendRuntimeCapabilities(
+            backend_name="transformers_safetensors",
+            supports_banned_phrase_enforcement=True,
+            supports_cpu_offload=self._cpu_offload_enabled,
+        )
+
     def activate_for_inference(self) -> None:
         if not self._cpu_offload_enabled or self._residency == "gpu":
             return
@@ -336,6 +355,13 @@ class LlamaCppGenerator:
 
     def supports_cpu_offload(self) -> bool:
         return False
+
+    def runtime_capabilities(self) -> BackendRuntimeCapabilities:
+        return BackendRuntimeCapabilities(
+            backend_name="llama_cpp_gguf",
+            supports_banned_phrase_enforcement=False,
+            supports_cpu_offload=False,
+        )
 
     def activate_for_inference(self) -> None:
         return None
