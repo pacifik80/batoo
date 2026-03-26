@@ -1,0 +1,10 @@
+{
+  "id": "guesser",
+  "description": "Role prompt for guessing from accepted clue history.",
+  "messages": [
+    {
+      "role": "user",
+      "template": "You are the Guesser in a local Taboo benchmark. Your job is to infer the hidden target from the accepted clue history.\n\nCurrent assignment: guess attempt {{ attempt_no }}.\nCurrent accepted clue: {{ current_clue }}.\nPrior accepted clues: {{ prior_accepted_clues_json }}.\nPrior wrong guesses: {{ prior_wrong_guesses_json }}.\n\nReturn exactly one English guess and nothing else. Use the accepted clue history to infer what kind of entity is being described. Prefer a concrete target over a broad concept when the clue points to a specific person, place, animal, object, event, or profession. Do not repeat a previous wrong guess or a trivial restatement of it.\n\nOutput contract: return only the final guess text."
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+models:
+  - id: qwen2.5-1.5b-instruct
+    display_name: Qwen2.5 1.5B Instruct
+    backend: transformers_safetensors
+    repo_id: Qwen/Qwen2.5-1.5B-Instruct
+    architecture_family: qwen2.5
+    chat_template_id: qwen_chatml
+    supports_system_prompt: true
+    stop_tokens: ["<|im_end|>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 4.0
+    default_generation_params:
+      temperature: 0.4
+      top_p: 0.9
+      max_tokens: 128
+    requires_hf_auth: false
+    gated: false
+    notes: Small starter model for all three roles.
+
+  - id: qwen2.5-3b-instruct
+    display_name: Qwen2.5 3B Instruct
+    backend: transformers_safetensors
+    repo_id: Qwen/Qwen2.5-3B-Instruct
+    architecture_family: qwen2.5
+    chat_template_id: qwen_chatml
+    supports_system_prompt: true
+    stop_tokens: ["<|im_end|>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 7.0
+    default_generation_params:
+      temperature: 0.4
+      top_p: 0.9
+      max_tokens: 160
+    requires_hf_auth: false
+    gated: false
+    notes: Stronger local baseline with a moderate memory footprint.
+
+  - id: phi-4-mini-instruct
+    display_name: Phi-4 Mini Instruct
+    backend: transformers_safetensors
+    repo_id: microsoft/Phi-4-mini-instruct
+    architecture_family: phi4
+    chat_template_id: phi_chat
+    supports_system_prompt: true
+    stop_tokens: ["<|assistant|>", "<|endoftext|>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 8.0
+    default_generation_params:
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 160
+    requires_hf_auth: false
+    gated: false
+    notes: Good compact instruct option for benchmark experiments.
+
+  - id: mistral-7b-instruct-v0.3
+    display_name: Mistral 7B Instruct v0.3
+    backend: transformers_safetensors
+    repo_id: mistralai/Mistral-7B-Instruct-v0.3
+    architecture_family: mistral
+    chat_template_id: mistral_inst
+    supports_system_prompt: true
+    stop_tokens: ["</s>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 14.0
+    default_generation_params:
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 160
+    requires_hf_auth: false
+    gated: false
+    notes: Heavier but still practical on stronger local setups.
+
+  - id: gemma-3-1b-it
+    display_name: Gemma 3 1B IT
+    backend: transformers_safetensors
+    repo_id: google/gemma-3-1b-it
+    architecture_family: gemma3
+    chat_template_id: gemma_chat
+    supports_system_prompt: true
+    stop_tokens: ["<end_of_turn>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 4.5
+    default_generation_params:
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 128
+    requires_hf_auth: true
+    gated: true
+    notes: Gated Gemma family starter entry.
+
+  - id: llama-3.1-8b-instruct
+    display_name: Llama 3.1 8B Instruct
+    backend: transformers_safetensors
+    repo_id: meta-llama/Llama-3.1-8B-Instruct
+    architecture_family: llama3.1
+    chat_template_id: llama3_chat
+    supports_system_prompt: true
+    stop_tokens: ["<|eot_id|>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 16.0
+    default_generation_params:
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 160
+    requires_hf_auth: true
+    gated: true
+    notes: Gated Meta Llama starter entry.
+
+  - id: qwen2.5-3b-instruct-gguf-q4km
+    display_name: Qwen2.5 3B Instruct GGUF Q4_K_M
+    backend: llama_cpp_gguf
+    repo_id: bartowski/Qwen2.5-3B-Instruct-GGUF
+    filename: Qwen2.5-3B-Instruct-Q4_K_M.gguf
+    architecture_family: qwen2.5
+    chat_template_id: qwen_chatml
+    supports_system_prompt: true
+    stop_tokens: ["<|im_end|>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 4.0
+    default_generation_params:
+      temperature: 0.4
+      top_p: 0.9
+      max_tokens: 160
+    requires_hf_auth: false
+    gated: false
+    notes: Quantized GGUF entry for lighter local testing.
+
+  - id: llama-3.1-8b-instruct-gguf-q4km
+    display_name: Llama 3.1 8B Instruct GGUF Q4_K_M
+    backend: llama_cpp_gguf
+    repo_id: bartowski/Meta-Llama-3.1-8B-Instruct-GGUF
+    filename: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+    architecture_family: llama3.1
+    chat_template_id: llama3_chat
+    supports_system_prompt: true
+    stop_tokens: ["<|eot_id|>"]
+    roles_supported: ["cluer", "guesser", "judge"]
+    languages: ["en"]
+    estimated_vram_gb: 8.0
+    default_generation_params:
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 160
+    requires_hf_auth: true
+    gated: true
+    notes: Quantized GGUF starter entry for gated Llama usage.
+

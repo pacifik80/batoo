@@ -1,0 +1,16 @@
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+
+.env
+.env.*
+!.env.example
+
+tmp_transcript_debug/
+README_dir_artifact/
+
+.DS_Store
+Thumbs.db

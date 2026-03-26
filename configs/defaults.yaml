@@ -1,0 +1,16 @@
+dataset:
+  source_repo: Kovah/Taboo-Data
+  source_ref: main
+  language: en
+
+run:
+  max_guess_attempts: 3
+  max_clue_repairs: 3
+  block_on_uncertain: false
+  memory_policy: keep_loaded_if_possible
+  random_seed: 7
+  device_preference: auto
+  show_hidden_repairs: true
+  allow_same_model_for_multiple_roles: true
+  debug_show_target: false
+  console_trace: true
