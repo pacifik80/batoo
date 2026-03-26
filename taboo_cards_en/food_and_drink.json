@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "category": "Food & Drink",
+  "language": "en",
+  "cards": [
+    {
+      "id": "food_and_drink-001",
+      "target": "Pizza",
+      "taboo": [
+        "cheese",
+        "slice",
+        "pepperoni",
+        "crust",
+        "delivery"
+      ]
+    },
+    {
+      "id": "food_and_drink-002",
+      "target": "Burger",
+      "taboo": [
+        "bun",
+        "beef",
+        "fries",
+        "sandwich",
+        "patty"
+      ]
+    },
+    {
+      "id": "food_and_drink-003",
+      "target": "Sushi",
+      "taboo": [
+        "Japan",
+        "rice",
+        "fish",
+        "roll",
+        "seaweed"
+      ]
+    },
+    {
+      "id": "food_and_drink-004",
+      "target": "Pancake",
+      "taboo": [
+        "breakfast",
+        "syrup",
+        "flat",
+        "stack",
+        "frying"
+      ]
+    },
+    {
+      "id": "food_and_drink-005",
+      "target": "Popcorn",
+      "taboo": [
+        "movie",
+        "corn",
+        "butter",
+        "salty",
+        "bowl"
+      ]
+    },
+    {
+      "id": "food_and_drink-006",
+      "target": "Ice Cream",
+      "taboo": [
+        "cold",
+        "cone",
+        "scoop",
+        "dessert",
+        "vanilla"
+      ]
+    },
+    {
+      "id": "food_and_drink-007",
+      "target": "Lemonade",
+      "taboo": [
+        "drink",
+        "lemon",
+        "summer",
+        "sweet",
+        "pitcher"
+      ]
+    },
+    {
+      "id": "food_and_drink-008",
+      "target": "Spaghetti",
+      "taboo": [
+        "pasta",
+        "noodles",
+        "Italy",
+        "sauce",
+        "fork"
+      ]
+    },
+    {
+      "id": "food_and_drink-009",
+      "target": "Chocolate",
+      "taboo": [
+        "candy",
+        "cocoa",
+        "sweet",
+        "bar",
+        "dessert"
+      ]
+    },
+    {
+      "id": "food_and_drink-010",
+      "target": "Avocado",
+      "taboo": [
+        "green",
+        "toast",
+        "guacamole",
+        "pit",
+        "fruit"
+      ]
+    },
+    {
+      "id": "food_and_drink-011",
+      "target": "Cheesecake",
+      "taboo": [
+        "dessert",
+        "cream cheese",
+        "crust",
+        "slice",
+        "bakery"
+      ]
+    },
+    {
+      "id": "food_and_drink-012",
+      "target": "Taco",
+      "taboo": [
+        "tortilla",
+        "Mexico",
+        "shell",
+        "salsa",
+        "Tuesday"
+      ]
+    },
+    {
+      "id": "food_and_drink-013",
+      "target": "Cereal",
+      "taboo": [
+        "breakfast",
+        "milk",
+        "bowl",
+        "crunchy",
+        "box"
+      ]
+    },
+    {
+      "id": "food_and_drink-014",
+      "target": "Mushroom",
+      "taboo": [
+        "fungus",
+        "pizza",
+        "forest",
+        "cap",
+        "soup"
+      ]
+    },
+    {
+      "id": "food_and_drink-015",
+      "target": "Cupcake",
+      "taboo": [
+        "frosting",
+        "bakery",
+        "small",
+        "birthday",
+        "wrapper"
+      ]
+    },
+    {
+      "id": "food_and_drink-016",
+      "target": "Honey",
+      "taboo": [
+        "bees",
+        "sweet",
+        "jar",
+        "sticky",
+        "tea"
+      ]
+    },
+    {
+      "id": "food_and_drink-017",
+      "target": "Watermelon",
+      "taboo": [
+        "summer",
+        "pink",
+        "seeds",
+        "rind",
+        "picnic"
+      ]
+    },
+    {
+      "id": "food_and_drink-018",
+      "target": "Coffee",
+      "taboo": [
+        "caffeine",
+        "morning",
+        "mug",
+        "beans",
+        "espresso"
+      ]
+    },
+    {
+      "id": "food_and_drink-019",
+      "target": "Tea",
+      "taboo": [
+        "kettle",
+        "leaves",
+        "cup",
+        "hot",
+        "bag"
+      ]
+    },
+    {
+      "id": "food_and_drink-020",
+      "target": "Sandwich",
+      "taboo": [
+        "bread",
+        "lunch",
+        "fill",
+        "deli",
+        "layers"
+      ]
+    },
+    {
+      "id": "food_and_drink-021",
+      "target": "Soup",
+      "taboo": [
+        "spoon",
+        "bowl",
+        "hot",
+        "broth",
+        "chicken"
+      ]
+    },
+    {
+      "id": "food_and_drink-022",
+      "target": "Cookie",
+      "taboo": [
+        "bake",
+        "chocolate chip",
+        "sweet",
+        "milk",
+        "oven"
+      ]
+    },
+    {
+      "id": "food_and_drink-023",
+      "target": "Bacon",
+      "taboo": [
+        "breakfast",
+        "pork",
+        "crispy",
+        "strips",
+        "pan"
+      ]
+    },
+    {
+      "id": "food_and_drink-024",
+      "target": "Omelet",
+      "taboo": [
+        "eggs",
+        "breakfast",
+        "cheese",
+        "pan",
+        "folded"
+      ]
+    },
+    {
+      "id": "food_and_drink-025",
+      "target": "Smoothie",
+      "taboo": [
+        "blender",
+        "fruit",
+        "yogurt",
+        "drink",
+        "straw"
+      ]
+    },
+    {
+      "id": "food_and_drink-026",
+      "target": "Donut",
+      "taboo": [
+        "hole",
+        "glaze",
+        "bakery",
+        "sprinkles",
+        "dozen"
+      ]
+    },
+    {
+      "id": "food_and_drink-027",
+      "target": "Steak",
+      "taboo": [
+        "beef",
+        "grill",
+        "knife",
+        "medium",
+        "dinner"
+      ]
+    },
+    {
+      "id": "food_and_drink-028",
+      "target": "Salad",
+      "taboo": [
+        "lettuce",
+        "bowl",
+        "dressing",
+        "healthy",
+        "greens"
+      ]
+    },
+    {
+      "id": "food_and_drink-029",
+      "target": "Nachos",
+      "taboo": [
+        "chips",
+        "cheese",
+        "salsa",
+        "stadium",
+        "jalapeno"
+      ]
+    },
+    {
+      "id": "food_and_drink-030",
+      "target": "Brownie",
+      "taboo": [
+        "chocolate",
+        "square",
+        "bake",
+        "dessert",
+        "fudgy"
+      ]
+    }
+  ]
+}

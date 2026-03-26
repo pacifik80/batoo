@@ -167,10 +167,41 @@ def transcript_message_html(message: TranscriptMessage) -> str:
         if message.tone != "meta"
         else ""
     )
+    status_html = (
+        f"<div class='transcript-status'>{html.escape(message.status_text)}</div>"
+        if message.status_text
+        else ""
+    )
+    text_html = (
+        f"<div class='transcript-text'>{html.escape(message.text)}</div>"
+        if message.text
+        else ""
+    )
+    debug_html = _transcript_debug_html(message)
     bubble_html = (
         f"<div class='transcript-bubble {bubble_class} transcript-inline-bubble'>"
-        f"{label_html}{html.escape(message.text)}</div>"
+        f"{label_html}{status_html}{text_html}{debug_html}</div>"
     )
     if message.tone == "meta":
         return f"<div class='transcript-row center'>{bubble_html}</div>"
     return f"<div class='transcript-row {message.alignment}'>{bubble_html}</div>"
+
+
+def _transcript_debug_html(message: TranscriptMessage) -> str:
+    if not message.debug_entries:
+        return ""
+    rows = "".join(
+        (
+            "<div class='transcript-debug-item'>"
+            f"<div class='transcript-debug-label'>{html.escape(entry.label)}</div>"
+            f"<div class='transcript-debug-value'>{html.escape(entry.value).replace(chr(10), '<br/>')}</div>"
+            "</div>"
+        )
+        for entry in message.debug_entries
+    )
+    return (
+        "<details class='transcript-debug'>"
+        "<summary>Debug</summary>"
+        f"<div class='transcript-debug-grid'>{rows}</div>"
+        "</details>"
+    )

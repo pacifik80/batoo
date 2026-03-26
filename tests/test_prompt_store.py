@@ -8,7 +8,16 @@ from taboo_arena.prompts.store import (
 
 
 def test_prompt_files_exist_and_validate() -> None:
-    for prompt_id in ["cluer", "guesser", "judge"]:
+    for prompt_id in [
+        "cluer",
+        "cluer_candidates",
+        "cluer_repair",
+        "guesser",
+        "guesser_candidates",
+        "judge",
+        "judge_clue",
+        "judge_guess",
+    ]:
         path = get_prompt_path(prompt_id)
         definition = load_prompt_definition(prompt_id)
 
@@ -19,21 +28,25 @@ def test_prompt_files_exist_and_validate() -> None:
 
 def test_render_prompt_messages_uses_json_files() -> None:
     messages = render_prompt_messages(
-        "cluer",
+        "cluer_candidates",
         {
             "target": "Bear",
-            "forbidden_words_csv": "grizzly, honey, pooh",
-            "aliases_csv": "Grizzly Bear",
+            "forbidden_words_json": "[\"grizzly\", \"honey\", \"pooh\"]",
+            "allowed_angles_json": "[\"type\", \"use\", \"context\"]",
+            "blocked_terms_json": "[\"bear\"]",
+            "blocked_prior_clues_json": "[\"forest mammal\"]",
+            "blocked_angles_json": "[\"effect\"]",
             "previous_accepted_clues_json": "[\"forest mammal\"]",
             "previous_rejected_clues_json": "[\"cave dweller\"]",
             "previous_wrong_guesses_json": "[\"wolf\"]",
             "attempt_no": 2,
             "repair_no": 1,
-            "last_rejection_feedback": "Rules failed: token_match.",
+            "repair_feedback_json": "{}",
+            "output_schema_json": "{\"candidates\":[{\"angle\":\"type\",\"clue\":\"string\"}]}",
         },
     )
 
     assert len(messages) == 1
     assert messages[0].content.startswith("You are the Cluer")
     assert "Target: Bear." in messages[0].content
-    assert "Latest rejection feedback: Rules failed: token_match." in messages[0].content
+    assert "Allowed angles" in messages[0].content

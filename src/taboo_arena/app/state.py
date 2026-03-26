@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any, cast
 
+from taboo_arena.cards.dataset import LOCAL_BUNDLED_DATASET_DIR, LOCAL_BUNDLED_SOURCE_REF
 from taboo_arena.config import AppSettings, GenerationParams, RoleName
 from taboo_arena.models.registry import ModelEntry
 
@@ -83,6 +84,14 @@ def initialize_session_state(state: Any, settings: AppSettings) -> None:
         defaults[f"{role}_generation_source_model_id"] = None
     for key, value in defaults.items():
         state.setdefault(key, value)
+    if (
+        LOCAL_BUNDLED_DATASET_DIR.exists()
+        and state.get("current_deck") is None
+        and str(state.get("language", "en")) == "en"
+        and str(state.get("source_ref", "")) == "main"
+    ):
+        state["source_ref"] = LOCAL_BUNDLED_SOURCE_REF
+        state["current_deck"] = None
     if "app_randomizer" not in state:
         state["app_randomizer"] = random.Random(int(state["random_seed"]))
 

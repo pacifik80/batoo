@@ -17,6 +17,7 @@ class MergedJudgeResult(BaseModel):
     logical_violations: list[str] = Field(default_factory=list)
     llm_judge_verdict: str
     llm_judge_reasons: list[str] = Field(default_factory=list)
+    llm_judge_warnings: list[str] = Field(default_factory=list)
 
 
 def merge_judge_results(
@@ -32,6 +33,8 @@ def merge_judge_results(
         final = "fail"
     elif llm.verdict == "uncertain":
         final = "fail" if block_on_uncertain else "pass_with_warning"
+    elif llm.warnings:
+        final = "pass_with_warning"
     else:
         final = "pass"
 
@@ -43,5 +46,5 @@ def merge_judge_results(
         logical_violations=logical.violations,
         llm_judge_verdict=llm.verdict,
         llm_judge_reasons=llm.reasons,
+        llm_judge_warnings=llm.warnings,
     )
-

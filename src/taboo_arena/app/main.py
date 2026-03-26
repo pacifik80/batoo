@@ -34,13 +34,18 @@ from taboo_arena.app.state import (
     recommended_generation_defaults,
     sync_selected_model_generation_defaults,
 )
-from taboo_arena.app.ui_stats_panel import render_round_pulse_inline
+from taboo_arena.app.ui_stats_panel import render_live_round_pulse_inline, render_round_pulse_inline
 from taboo_arena.app.ui_theme import apply_theme
 from taboo_arena.app.ui_transcript_panel import (
     active_transcript_placeholder,
     archive_current_logger_for_transcript,
     live_logger_events,
     render_transcript_panel_content,
+)
+from taboo_arena.cards.dataset import (
+    LOCAL_BUNDLED_DATASET_DIR,
+    LOCAL_BUNDLED_SOURCE_REF,
+    LOCAL_BUNDLED_SOURCE_REPO,
 )
 from taboo_arena.config import AppSettings, BackendName, GenerationParams, RoleName
 from taboo_arena.logging.run_logger import RunLogger
@@ -179,9 +184,16 @@ def _settings_from_session(settings: AppSettings) -> AppSettings:
 
 
 def _ensure_deck(settings: AppSettings) -> Any:
+    bundled_source_expected = (
+        settings.dataset.language == "en"
+        and LOCAL_BUNDLED_DATASET_DIR.exists()
+        and settings.dataset.source_ref in {LOCAL_BUNDLED_SOURCE_REF, "main"}
+    )
     if st.session_state.current_deck is not None:
         current = st.session_state.current_deck
-        if current.metadata.source_ref == settings.dataset.source_ref:
+        if current.metadata.source_ref == settings.dataset.source_ref and (
+            not bundled_source_expected or current.metadata.source_repo == LOCAL_BUNDLED_SOURCE_REPO
+        ):
             return current
     dataset_manager = build_dataset_manager(settings)
     try:
@@ -1221,7 +1233,7 @@ def _render_main_body(
     selected_card = _selected_card(deck)
 
     with left_col:
-        with st.container(border=True):
+        with st.container(border=True, key="bottom_card_panel", height="stretch"):
             st.markdown("<div class='section-heading'>Taboo card</div>", unsafe_allow_html=True)
             card_showcase_col, card_action_col = st.columns([0.9, 0.1], gap="small", vertical_alignment="center")
             with card_showcase_col:
@@ -1283,33 +1295,31 @@ def _render_main_body(
     current_result = session.current_result
 
     with middle_col:
-        transcript_slot = st.empty()
-        if _active_run_present():
-            pass
-        else:
-            with transcript_slot.container(border=True):
-                st.markdown("<div class='section-heading'>Chat / transcript</div>", unsafe_allow_html=True)
-                render_transcript_panel_content(
-                    session=session,
-                    logger=logger,
-                    current_result=current_result,
-                    active_run_present=False,
-                )
+        with st.container(border=True, key="bottom_transcript_panel", height="stretch"):
+            st.markdown("<div class='section-heading'>Chat / transcript</div>", unsafe_allow_html=True)
+            transcript_slot = st.empty()
+            if not _active_run_present():
+                with transcript_slot.container():
+                    render_transcript_panel_content(
+                        session=session,
+                        logger=logger,
+                        current_result=current_result,
+                        active_run_present=False,
+                    )
 
     with right_col:
-        metrics_slot = st.empty()
-        if _active_run_present():
-            pass
-        else:
-            with metrics_slot.container(border=True):
-                st.markdown("<div class='section-heading'>Metrics</div>", unsafe_allow_html=True)
-                render_round_pulse_inline(
-                    session=session,
-                    logger=logger,
-                    selected_models=selected_models,
-                    model_manager=model_manager,
-                    current_events=[] if logger is None else live_logger_events(logger),
-                )
+        with st.container(border=True, key="bottom_metrics_panel", height="stretch"):
+            st.markdown("<div class='section-heading'>Metrics</div>", unsafe_allow_html=True)
+            metrics_slot = st.empty()
+            if not _active_run_present():
+                with metrics_slot.container():
+                    render_round_pulse_inline(
+                        session=session,
+                        logger=logger,
+                        selected_models=selected_models,
+                        model_manager=model_manager,
+                        current_events=[] if logger is None else live_logger_events(logger),
+                    )
     if _active_run_present():
         _render_live_round_panels(
             transcript_slot=transcript_slot,
@@ -1331,25 +1341,20 @@ def _render_live_round_panels(
     _poll_active_job_updates()
     logger = session.current_logger
     current_result = session.current_result
-    transcript_slot.empty()
-    metrics_slot.empty()
-    with transcript_slot.container(border=True):
-        st.markdown("<div class='section-heading'>Chat / transcript</div>", unsafe_allow_html=True)
+    with transcript_slot.container():
         render_transcript_panel_content(
             session=session,
             logger=logger,
             current_result=current_result,
             active_run_present=True,
         )
-    with metrics_slot.container(border=True):
-        st.markdown("<div class='section-heading'>Metrics</div>", unsafe_allow_html=True)
-        render_round_pulse_inline(
+    with metrics_slot.container():
+        render_live_round_pulse_inline(
             session=session,
             logger=logger,
             selected_models=selected_models,
             model_manager=model_manager,
             current_events=[] if logger is None else live_logger_events(logger),
-            allow_export_widget=False,
         )
     if _finalize_active_job_if_needed():
         st.rerun()

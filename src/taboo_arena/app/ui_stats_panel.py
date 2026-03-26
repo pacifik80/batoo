@@ -85,6 +85,51 @@ def render_round_pulse_inline(
         )
 
 
+def render_live_round_pulse_inline(
+    *,
+    session: SessionFacade,
+    logger: RunLogger | None,
+    selected_models: dict[str, ModelEntry],
+    model_manager: ModelManager,
+    current_events: list[dict[str, Any]],
+) -> None:
+    """Render a smoother live-only metrics view without interactive widgets."""
+    session_round_summaries, session_events = session_metric_inputs(
+        session=session,
+        current_logger=logger,
+        current_events=current_events,
+    )
+    shared_models = len({entry.repo_id for entry in selected_models.values()})
+
+    st.markdown("<div class='metrics-live-heading'>Round metrics</div>", unsafe_allow_html=True)
+    if current_events:
+        render_live_round_metric_groups(
+            events=current_events,
+            shared_models=shared_models,
+            loaded_model_count=len(model_manager.loaded_models),
+        )
+    else:
+        st.caption("Round metrics will populate after the current round starts.")
+
+    if session_round_summaries:
+        st.markdown("<div class='metrics-live-heading'>Session snapshot</div>", unsafe_allow_html=True)
+        render_metric_groups(
+            round_summaries=session_round_summaries,
+            events=session_events,
+            shared_models=shared_models,
+            loaded_model_count=len(model_manager.loaded_models),
+        )
+
+    warnings = [] if logger is None else logger.latest_errors()
+    if warnings:
+        st.warning(warnings[-1])
+
+    st.caption(
+        f"{shared_models} unique model repo(s) selected. "
+        f"Loaded now: {len(model_manager.loaded_models)}."
+    )
+
+
 def render_live_round_metric_groups(
     *,
     events: list[dict[str, Any]],

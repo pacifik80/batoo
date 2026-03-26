@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "category": "Entertainment & Pop Culture",
+  "language": "en",
+  "cards": [
+    {
+      "id": "entertainment_and_pop_culture-001",
+      "target": "Superhero",
+      "taboo": [
+        "cape",
+        "comic",
+        "powers",
+        "villain",
+        "mask"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-002",
+      "target": "Karaoke",
+      "taboo": [
+        "singing",
+        "microphone",
+        "lyrics",
+        "bar",
+        "performance"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-003",
+      "target": "Director",
+      "taboo": [
+        "film",
+        "camera",
+        "movie",
+        "action",
+        "set"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-004",
+      "target": "Binge-Watching",
+      "taboo": [
+        "episodes",
+        "series",
+        "sofa",
+        "streaming",
+        "weekend"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-005",
+      "target": "Violin",
+      "taboo": [
+        "strings",
+        "bow",
+        "orchestra",
+        "classical",
+        "instrument"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-006",
+      "target": "Magician",
+      "taboo": [
+        "tricks",
+        "cards",
+        "rabbit",
+        "illusion",
+        "stage"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-007",
+      "target": "Festival",
+      "taboo": [
+        "music",
+        "crowd",
+        "tents",
+        "summer",
+        "tickets"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-008",
+      "target": "Audience",
+      "taboo": [
+        "crowd",
+        "watch",
+        "clap",
+        "seats",
+        "theater"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-009",
+      "target": "Ballet",
+      "taboo": [
+        "dance",
+        "tutu",
+        "pointe",
+        "stage",
+        "graceful"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-010",
+      "target": "Joke",
+      "taboo": [
+        "funny",
+        "laugh",
+        "punchline",
+        "tell",
+        "comedian"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-011",
+      "target": "Puzzle",
+      "taboo": [
+        "pieces",
+        "jigsaw",
+        "solve",
+        "table",
+        "picture"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-012",
+      "target": "Chess",
+      "taboo": [
+        "king",
+        "queen",
+        "board",
+        "checkmate",
+        "strategy"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-013",
+      "target": "Mascot",
+      "taboo": [
+        "costume",
+        "team",
+        "stadium",
+        "character",
+        "school"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-014",
+      "target": "Fireworks",
+      "taboo": [
+        "sky",
+        "explode",
+        "colors",
+        "celebration",
+        "night"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-015",
+      "target": "Novel",
+      "taboo": [
+        "book",
+        "author",
+        "chapters",
+        "fiction",
+        "read"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-016",
+      "target": "Meme",
+      "taboo": [
+        "internet",
+        "funny",
+        "image",
+        "viral",
+        "caption"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-017",
+      "target": "Concert",
+      "taboo": [
+        "music",
+        "stage",
+        "tickets",
+        "crowd",
+        "live"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-018",
+      "target": "Applause",
+      "taboo": [
+        "clap",
+        "audience",
+        "performance",
+        "hands",
+        "cheer"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-019",
+      "target": "Graffiti",
+      "taboo": [
+        "wall",
+        "spray paint",
+        "street art",
+        "mural",
+        "urban"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-020",
+      "target": "Circus",
+      "taboo": [
+        "tent",
+        "clowns",
+        "acrobat",
+        "ringmaster",
+        "show"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-021",
+      "target": "Premiere",
+      "taboo": [
+        "first showing",
+        "red carpet",
+        "opening night",
+        "debut",
+        "film"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-022",
+      "target": "Lyrics",
+      "taboo": [
+        "song",
+        "words",
+        "sing",
+        "chorus",
+        "verse"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-023",
+      "target": "Drums",
+      "taboo": [
+        "beat",
+        "sticks",
+        "percussion",
+        "band",
+        "rhythm"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-024",
+      "target": "Comedian",
+      "taboo": [
+        "stand-up",
+        "jokes",
+        "funny",
+        "stage",
+        "laugh"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-025",
+      "target": "Album",
+      "taboo": [
+        "songs",
+        "record",
+        "release",
+        "musician",
+        "tracks"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-026",
+      "target": "Origami",
+      "taboo": [
+        "paper",
+        "fold",
+        "crane",
+        "Japan",
+        "art"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-027",
+      "target": "Spoiler",
+      "taboo": [
+        "ending",
+        "reveal",
+        "movie",
+        "surprise",
+        "plot"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-028",
+      "target": "Animation",
+      "taboo": [
+        "cartoon",
+        "drawings",
+        "frames",
+        "studio",
+        "movement"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-029",
+      "target": "Board Game",
+      "taboo": [
+        "dice",
+        "pieces",
+        "table",
+        "family",
+        "rules"
+      ]
+    },
+    {
+      "id": "entertainment_and_pop_culture-030",
+      "target": "Costume",
+      "taboo": [
+        "Halloween",
+        "dress-up",
+        "character",
+        "outfit",
+        "party"
+      ]
+    }
+  ]
+}

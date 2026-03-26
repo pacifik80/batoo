@@ -1,0 +1,2028 @@
+{
+  "schema_version": 1,
+  "language": "en",
+  "categories": [
+    {
+      "schema_version": 1,
+      "category": "Everyday Life",
+      "language": "en",
+      "cards": [
+        {
+          "id": "everyday_life-001",
+          "target": "Umbrella",
+          "taboo": [
+            "rain",
+            "wet",
+            "storm",
+            "carry",
+            "open"
+          ]
+        },
+        {
+          "id": "everyday_life-002",
+          "target": "Backpack",
+          "taboo": [
+            "bag",
+            "school",
+            "straps",
+            "carry",
+            "shoulder"
+          ]
+        },
+        {
+          "id": "everyday_life-003",
+          "target": "Mirror",
+          "taboo": [
+            "reflection",
+            "glass",
+            "face",
+            "look",
+            "wall"
+          ]
+        },
+        {
+          "id": "everyday_life-004",
+          "target": "Pillow",
+          "taboo": [
+            "sleep",
+            "bed",
+            "soft",
+            "head",
+            "cushion"
+          ]
+        },
+        {
+          "id": "everyday_life-005",
+          "target": "Toothbrush",
+          "taboo": [
+            "teeth",
+            "toothpaste",
+            "bathroom",
+            "dentist",
+            "bristles"
+          ]
+        },
+        {
+          "id": "everyday_life-006",
+          "target": "Sunglasses",
+          "taboo": [
+            "sun",
+            "eyes",
+            "wear",
+            "shade",
+            "summer"
+          ]
+        },
+        {
+          "id": "everyday_life-007",
+          "target": "Elevator",
+          "taboo": [
+            "building",
+            "floor",
+            "buttons",
+            "up",
+            "down"
+          ]
+        },
+        {
+          "id": "everyday_life-008",
+          "target": "Wallet",
+          "taboo": [
+            "money",
+            "cards",
+            "pocket",
+            "cash",
+            "leather"
+          ]
+        },
+        {
+          "id": "everyday_life-009",
+          "target": "Alarm Clock",
+          "taboo": [
+            "wake",
+            "morning",
+            "time",
+            "ring",
+            "snooze"
+          ]
+        },
+        {
+          "id": "everyday_life-010",
+          "target": "Blanket",
+          "taboo": [
+            "warm",
+            "bed",
+            "cover",
+            "sleep",
+            "soft"
+          ]
+        },
+        {
+          "id": "everyday_life-011",
+          "target": "Scissors",
+          "taboo": [
+            "cut",
+            "paper",
+            "blades",
+            "sharp",
+            "school"
+          ]
+        },
+        {
+          "id": "everyday_life-012",
+          "target": "Bicycle",
+          "taboo": [
+            "pedal",
+            "wheels",
+            "ride",
+            "helmet",
+            "chain"
+          ]
+        },
+        {
+          "id": "everyday_life-013",
+          "target": "Flashlight",
+          "taboo": [
+            "light",
+            "dark",
+            "battery",
+            "camping",
+            "beam"
+          ]
+        },
+        {
+          "id": "everyday_life-014",
+          "target": "Suitcase",
+          "taboo": [
+            "travel",
+            "airport",
+            "clothes",
+            "luggage",
+            "wheels"
+          ]
+        },
+        {
+          "id": "everyday_life-015",
+          "target": "Passport",
+          "taboo": [
+            "country",
+            "travel",
+            "border",
+            "stamp",
+            "document"
+          ]
+        },
+        {
+          "id": "everyday_life-016",
+          "target": "Receipt",
+          "taboo": [
+            "store",
+            "paper",
+            "buy",
+            "proof",
+            "total"
+          ]
+        },
+        {
+          "id": "everyday_life-017",
+          "target": "Keychain",
+          "taboo": [
+            "keys",
+            "ring",
+            "pocket",
+            "metal",
+            "car"
+          ]
+        },
+        {
+          "id": "everyday_life-018",
+          "target": "Laundry",
+          "taboo": [
+            "clothes",
+            "wash",
+            "dryer",
+            "dirty",
+            "basket"
+          ]
+        },
+        {
+          "id": "everyday_life-019",
+          "target": "Remote Control",
+          "taboo": [
+            "television",
+            "buttons",
+            "channel",
+            "couch",
+            "battery"
+          ]
+        },
+        {
+          "id": "everyday_life-020",
+          "target": "Headphones",
+          "taboo": [
+            "music",
+            "ears",
+            "listen",
+            "wireless",
+            "sound"
+          ]
+        },
+        {
+          "id": "everyday_life-021",
+          "target": "Notebook",
+          "taboo": [
+            "paper",
+            "write",
+            "pages",
+            "school",
+            "spiral"
+          ]
+        },
+        {
+          "id": "everyday_life-022",
+          "target": "Calendar",
+          "taboo": [
+            "date",
+            "month",
+            "year",
+            "schedule",
+            "wall"
+          ]
+        },
+        {
+          "id": "everyday_life-023",
+          "target": "Mug",
+          "taboo": [
+            "coffee",
+            "cup",
+            "handle",
+            "tea",
+            "drink"
+          ]
+        },
+        {
+          "id": "everyday_life-024",
+          "target": "Towel",
+          "taboo": [
+            "bathroom",
+            "dry",
+            "shower",
+            "beach",
+            "cloth"
+          ]
+        },
+        {
+          "id": "everyday_life-025",
+          "target": "Charger",
+          "taboo": [
+            "phone",
+            "battery",
+            "cable",
+            "plug",
+            "power"
+          ]
+        },
+        {
+          "id": "everyday_life-026",
+          "target": "Doorbell",
+          "taboo": [
+            "front door",
+            "ring",
+            "visitor",
+            "press",
+            "house"
+          ]
+        },
+        {
+          "id": "everyday_life-027",
+          "target": "Traffic Light",
+          "taboo": [
+            "red",
+            "green",
+            "yellow",
+            "intersection",
+            "stop"
+          ]
+        },
+        {
+          "id": "everyday_life-028",
+          "target": "Escalator",
+          "taboo": [
+            "stairs",
+            "mall",
+            "moving",
+            "up",
+            "down"
+          ]
+        },
+        {
+          "id": "everyday_life-029",
+          "target": "Trash Can",
+          "taboo": [
+            "garbage",
+            "bin",
+            "kitchen",
+            "throw",
+            "waste"
+          ]
+        },
+        {
+          "id": "everyday_life-030",
+          "target": "Vacuum Cleaner",
+          "taboo": [
+            "floor",
+            "dust",
+            "clean",
+            "carpet",
+            "machine"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "category": "Food & Drink",
+      "language": "en",
+      "cards": [
+        {
+          "id": "food_and_drink-001",
+          "target": "Pizza",
+          "taboo": [
+            "cheese",
+            "slice",
+            "pepperoni",
+            "crust",
+            "delivery"
+          ]
+        },
+        {
+          "id": "food_and_drink-002",
+          "target": "Burger",
+          "taboo": [
+            "bun",
+            "beef",
+            "fries",
+            "sandwich",
+            "patty"
+          ]
+        },
+        {
+          "id": "food_and_drink-003",
+          "target": "Sushi",
+          "taboo": [
+            "Japan",
+            "rice",
+            "fish",
+            "roll",
+            "seaweed"
+          ]
+        },
+        {
+          "id": "food_and_drink-004",
+          "target": "Pancake",
+          "taboo": [
+            "breakfast",
+            "syrup",
+            "flat",
+            "stack",
+            "frying"
+          ]
+        },
+        {
+          "id": "food_and_drink-005",
+          "target": "Popcorn",
+          "taboo": [
+            "movie",
+            "corn",
+            "butter",
+            "salty",
+            "bowl"
+          ]
+        },
+        {
+          "id": "food_and_drink-006",
+          "target": "Ice Cream",
+          "taboo": [
+            "cold",
+            "cone",
+            "scoop",
+            "dessert",
+            "vanilla"
+          ]
+        },
+        {
+          "id": "food_and_drink-007",
+          "target": "Lemonade",
+          "taboo": [
+            "drink",
+            "lemon",
+            "summer",
+            "sweet",
+            "pitcher"
+          ]
+        },
+        {
+          "id": "food_and_drink-008",
+          "target": "Spaghetti",
+          "taboo": [
+            "pasta",
+            "noodles",
+            "Italy",
+            "sauce",
+            "fork"
+          ]
+        },
+        {
+          "id": "food_and_drink-009",
+          "target": "Chocolate",
+          "taboo": [
+            "candy",
+            "cocoa",
+            "sweet",
+            "bar",
+            "dessert"
+          ]
+        },
+        {
+          "id": "food_and_drink-010",
+          "target": "Avocado",
+          "taboo": [
+            "green",
+            "toast",
+            "guacamole",
+            "pit",
+            "fruit"
+          ]
+        },
+        {
+          "id": "food_and_drink-011",
+          "target": "Cheesecake",
+          "taboo": [
+            "dessert",
+            "cream cheese",
+            "crust",
+            "slice",
+            "bakery"
+          ]
+        },
+        {
+          "id": "food_and_drink-012",
+          "target": "Taco",
+          "taboo": [
+            "tortilla",
+            "Mexico",
+            "shell",
+            "salsa",
+            "Tuesday"
+          ]
+        },
+        {
+          "id": "food_and_drink-013",
+          "target": "Cereal",
+          "taboo": [
+            "breakfast",
+            "milk",
+            "bowl",
+            "crunchy",
+            "box"
+          ]
+        },
+        {
+          "id": "food_and_drink-014",
+          "target": "Mushroom",
+          "taboo": [
+            "fungus",
+            "pizza",
+            "forest",
+            "cap",
+            "soup"
+          ]
+        },
+        {
+          "id": "food_and_drink-015",
+          "target": "Cupcake",
+          "taboo": [
+            "frosting",
+            "bakery",
+            "small",
+            "birthday",
+            "wrapper"
+          ]
+        },
+        {
+          "id": "food_and_drink-016",
+          "target": "Honey",
+          "taboo": [
+            "bees",
+            "sweet",
+            "jar",
+            "sticky",
+            "tea"
+          ]
+        },
+        {
+          "id": "food_and_drink-017",
+          "target": "Watermelon",
+          "taboo": [
+            "summer",
+            "pink",
+            "seeds",
+            "rind",
+            "picnic"
+          ]
+        },
+        {
+          "id": "food_and_drink-018",
+          "target": "Coffee",
+          "taboo": [
+            "caffeine",
+            "morning",
+            "mug",
+            "beans",
+            "espresso"
+          ]
+        },
+        {
+          "id": "food_and_drink-019",
+          "target": "Tea",
+          "taboo": [
+            "kettle",
+            "leaves",
+            "cup",
+            "hot",
+            "bag"
+          ]
+        },
+        {
+          "id": "food_and_drink-020",
+          "target": "Sandwich",
+          "taboo": [
+            "bread",
+            "lunch",
+            "fill",
+            "deli",
+            "layers"
+          ]
+        },
+        {
+          "id": "food_and_drink-021",
+          "target": "Soup",
+          "taboo": [
+            "spoon",
+            "bowl",
+            "hot",
+            "broth",
+            "chicken"
+          ]
+        },
+        {
+          "id": "food_and_drink-022",
+          "target": "Cookie",
+          "taboo": [
+            "bake",
+            "chocolate chip",
+            "sweet",
+            "milk",
+            "oven"
+          ]
+        },
+        {
+          "id": "food_and_drink-023",
+          "target": "Bacon",
+          "taboo": [
+            "breakfast",
+            "pork",
+            "crispy",
+            "strips",
+            "pan"
+          ]
+        },
+        {
+          "id": "food_and_drink-024",
+          "target": "Omelet",
+          "taboo": [
+            "eggs",
+            "breakfast",
+            "cheese",
+            "pan",
+            "folded"
+          ]
+        },
+        {
+          "id": "food_and_drink-025",
+          "target": "Smoothie",
+          "taboo": [
+            "blender",
+            "fruit",
+            "yogurt",
+            "drink",
+            "straw"
+          ]
+        },
+        {
+          "id": "food_and_drink-026",
+          "target": "Donut",
+          "taboo": [
+            "hole",
+            "glaze",
+            "bakery",
+            "sprinkles",
+            "dozen"
+          ]
+        },
+        {
+          "id": "food_and_drink-027",
+          "target": "Steak",
+          "taboo": [
+            "beef",
+            "grill",
+            "knife",
+            "medium",
+            "dinner"
+          ]
+        },
+        {
+          "id": "food_and_drink-028",
+          "target": "Salad",
+          "taboo": [
+            "lettuce",
+            "bowl",
+            "dressing",
+            "healthy",
+            "greens"
+          ]
+        },
+        {
+          "id": "food_and_drink-029",
+          "target": "Nachos",
+          "taboo": [
+            "chips",
+            "cheese",
+            "salsa",
+            "stadium",
+            "jalapeno"
+          ]
+        },
+        {
+          "id": "food_and_drink-030",
+          "target": "Brownie",
+          "taboo": [
+            "chocolate",
+            "square",
+            "bake",
+            "dessert",
+            "fudgy"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "category": "Travel & Places",
+      "language": "en",
+      "cards": [
+        {
+          "id": "travel_and_places-001",
+          "target": "Airport",
+          "taboo": [
+            "plane",
+            "security",
+            "terminal",
+            "gate",
+            "luggage"
+          ]
+        },
+        {
+          "id": "travel_and_places-002",
+          "target": "Hotel",
+          "taboo": [
+            "room",
+            "vacation",
+            "check-in",
+            "lobby",
+            "reservation"
+          ]
+        },
+        {
+          "id": "travel_and_places-003",
+          "target": "Beach",
+          "taboo": [
+            "sand",
+            "ocean",
+            "sunscreen",
+            "waves",
+            "towel"
+          ]
+        },
+        {
+          "id": "travel_and_places-004",
+          "target": "Museum",
+          "taboo": [
+            "art",
+            "exhibit",
+            "history",
+            "gallery",
+            "tickets"
+          ]
+        },
+        {
+          "id": "travel_and_places-005",
+          "target": "Mountain",
+          "taboo": [
+            "climb",
+            "peak",
+            "hiking",
+            "snow",
+            "trail"
+          ]
+        },
+        {
+          "id": "travel_and_places-006",
+          "target": "Subway",
+          "taboo": [
+            "train",
+            "underground",
+            "station",
+            "city",
+            "tunnel"
+          ]
+        },
+        {
+          "id": "travel_and_places-007",
+          "target": "Bridge",
+          "taboo": [
+            "river",
+            "cross",
+            "structure",
+            "traffic",
+            "suspension"
+          ]
+        },
+        {
+          "id": "travel_and_places-008",
+          "target": "Desert",
+          "taboo": [
+            "sand",
+            "dry",
+            "cactus",
+            "hot",
+            "camel"
+          ]
+        },
+        {
+          "id": "travel_and_places-009",
+          "target": "Island",
+          "taboo": [
+            "ocean",
+            "surrounded",
+            "tropical",
+            "boat",
+            "coast"
+          ]
+        },
+        {
+          "id": "travel_and_places-010",
+          "target": "Customs",
+          "taboo": [
+            "border",
+            "airport",
+            "suitcase",
+            "declare",
+            "officer"
+          ]
+        },
+        {
+          "id": "travel_and_places-011",
+          "target": "Campground",
+          "taboo": [
+            "tent",
+            "fire",
+            "forest",
+            "reservation",
+            "outdoors"
+          ]
+        },
+        {
+          "id": "travel_and_places-012",
+          "target": "Cruise",
+          "taboo": [
+            "ship",
+            "vacation",
+            "ocean",
+            "buffet",
+            "cabin"
+          ]
+        },
+        {
+          "id": "travel_and_places-013",
+          "target": "Map",
+          "taboo": [
+            "directions",
+            "route",
+            "paper",
+            "location",
+            "fold"
+          ]
+        },
+        {
+          "id": "travel_and_places-014",
+          "target": "Souvenir",
+          "taboo": [
+            "gift",
+            "travel",
+            "remember",
+            "shop",
+            "tourist"
+          ]
+        },
+        {
+          "id": "travel_and_places-015",
+          "target": "Taxi",
+          "taboo": [
+            "cab",
+            "meter",
+            "driver",
+            "city",
+            "yellow"
+          ]
+        },
+        {
+          "id": "travel_and_places-016",
+          "target": "Backpacking",
+          "taboo": [
+            "hostel",
+            "trail",
+            "trip",
+            "budget",
+            "rucksack"
+          ]
+        },
+        {
+          "id": "travel_and_places-017",
+          "target": "Temple",
+          "taboo": [
+            "worship",
+            "ancient",
+            "prayer",
+            "stone",
+            "shrine"
+          ]
+        },
+        {
+          "id": "travel_and_places-018",
+          "target": "Waterfall",
+          "taboo": [
+            "river",
+            "falling",
+            "cliff",
+            "nature",
+            "spray"
+          ]
+        },
+        {
+          "id": "travel_and_places-019",
+          "target": "Skyscraper",
+          "taboo": [
+            "tall",
+            "city",
+            "office",
+            "windows",
+            "tower"
+          ]
+        },
+        {
+          "id": "travel_and_places-020",
+          "target": "Roundabout",
+          "taboo": [
+            "circle",
+            "traffic",
+            "exit",
+            "road",
+            "intersection"
+          ]
+        },
+        {
+          "id": "travel_and_places-021",
+          "target": "Border",
+          "taboo": [
+            "country",
+            "crossing",
+            "passport",
+            "line",
+            "fence"
+          ]
+        },
+        {
+          "id": "travel_and_places-022",
+          "target": "Hostel",
+          "taboo": [
+            "bunk",
+            "cheap",
+            "travelers",
+            "dorm",
+            "backpacker"
+          ]
+        },
+        {
+          "id": "travel_and_places-023",
+          "target": "Lighthouse",
+          "taboo": [
+            "coast",
+            "ships",
+            "tower",
+            "ocean",
+            "beacon"
+          ]
+        },
+        {
+          "id": "travel_and_places-024",
+          "target": "Volcano",
+          "taboo": [
+            "lava",
+            "eruption",
+            "mountain",
+            "ash",
+            "crater"
+          ]
+        },
+        {
+          "id": "travel_and_places-025",
+          "target": "Amusement Park",
+          "taboo": [
+            "rides",
+            "roller coaster",
+            "tickets",
+            "families",
+            "theme"
+          ]
+        },
+        {
+          "id": "travel_and_places-026",
+          "target": "Harbor",
+          "taboo": [
+            "boats",
+            "docks",
+            "water",
+            "port",
+            "marina"
+          ]
+        },
+        {
+          "id": "travel_and_places-027",
+          "target": "Monument",
+          "taboo": [
+            "statue",
+            "landmark",
+            "history",
+            "memorial",
+            "tourists"
+          ]
+        },
+        {
+          "id": "travel_and_places-028",
+          "target": "Trail",
+          "taboo": [
+            "hike",
+            "forest",
+            "path",
+            "boots",
+            "map"
+          ]
+        },
+        {
+          "id": "travel_and_places-029",
+          "target": "Castle",
+          "taboo": [
+            "king",
+            "stone",
+            "medieval",
+            "tower",
+            "moat"
+          ]
+        },
+        {
+          "id": "travel_and_places-030",
+          "target": "Village",
+          "taboo": [
+            "small town",
+            "countryside",
+            "locals",
+            "square",
+            "rural"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "category": "Science & Nature",
+      "language": "en",
+      "cards": [
+        {
+          "id": "science_and_nature-001",
+          "target": "Tornado",
+          "taboo": [
+            "storm",
+            "funnel",
+            "wind",
+            "damage",
+            "twister"
+          ]
+        },
+        {
+          "id": "science_and_nature-002",
+          "target": "Rainbow",
+          "taboo": [
+            "colors",
+            "sky",
+            "rain",
+            "arc",
+            "mythical pot"
+          ]
+        },
+        {
+          "id": "science_and_nature-003",
+          "target": "Penguin",
+          "taboo": [
+            "bird",
+            "Antarctica",
+            "tuxedo",
+            "waddle",
+            "ice"
+          ]
+        },
+        {
+          "id": "science_and_nature-004",
+          "target": "Dolphin",
+          "taboo": [
+            "ocean",
+            "mammal",
+            "intelligent",
+            "fin",
+            "swim"
+          ]
+        },
+        {
+          "id": "science_and_nature-005",
+          "target": "Cactus",
+          "taboo": [
+            "desert",
+            "spines",
+            "plant",
+            "dry",
+            "pot"
+          ]
+        },
+        {
+          "id": "science_and_nature-006",
+          "target": "Glacier",
+          "taboo": [
+            "ice",
+            "melting",
+            "mountain",
+            "blue",
+            "climate"
+          ]
+        },
+        {
+          "id": "science_and_nature-007",
+          "target": "Owl",
+          "taboo": [
+            "night",
+            "bird",
+            "hoot",
+            "wisdom",
+            "feathers"
+          ]
+        },
+        {
+          "id": "science_and_nature-008",
+          "target": "Butterfly",
+          "taboo": [
+            "wings",
+            "caterpillar",
+            "insect",
+            "colorful",
+            "garden"
+          ]
+        },
+        {
+          "id": "science_and_nature-009",
+          "target": "Thunder",
+          "taboo": [
+            "storm",
+            "loud",
+            "sky",
+            "lightning",
+            "rumble"
+          ]
+        },
+        {
+          "id": "science_and_nature-010",
+          "target": "Eclipse",
+          "taboo": [
+            "moon",
+            "sun",
+            "shadow",
+            "astronomy",
+            "darken"
+          ]
+        },
+        {
+          "id": "science_and_nature-011",
+          "target": "Jungle",
+          "taboo": [
+            "rainforest",
+            "dense",
+            "vines",
+            "tropical",
+            "wild"
+          ]
+        },
+        {
+          "id": "science_and_nature-012",
+          "target": "Coral Reef",
+          "taboo": [
+            "ocean",
+            "fish",
+            "colorful",
+            "diving",
+            "barrier"
+          ]
+        },
+        {
+          "id": "science_and_nature-013",
+          "target": "Fossil",
+          "taboo": [
+            "dinosaur",
+            "rock",
+            "ancient",
+            "bones",
+            "dig"
+          ]
+        },
+        {
+          "id": "science_and_nature-014",
+          "target": "Planet",
+          "taboo": [
+            "orbit",
+            "space",
+            "world",
+            "solar system",
+            "round"
+          ]
+        },
+        {
+          "id": "science_and_nature-015",
+          "target": "Gravity",
+          "taboo": [
+            "fall",
+            "force",
+            "earth",
+            "weight",
+            "physics"
+          ]
+        },
+        {
+          "id": "science_and_nature-016",
+          "target": "Microscope",
+          "taboo": [
+            "lab",
+            "magnify",
+            "lens",
+            "tiny",
+            "science"
+          ]
+        },
+        {
+          "id": "science_and_nature-017",
+          "target": "DNA",
+          "taboo": [
+            "genes",
+            "double helix",
+            "biology",
+            "cells",
+            "inherit"
+          ]
+        },
+        {
+          "id": "science_and_nature-018",
+          "target": "Robot",
+          "taboo": [
+            "machine",
+            "metal",
+            "program",
+            "human-like",
+            "automate"
+          ]
+        },
+        {
+          "id": "science_and_nature-019",
+          "target": "Bacteria",
+          "taboo": [
+            "germs",
+            "microscopic",
+            "cells",
+            "infection",
+            "culture"
+          ]
+        },
+        {
+          "id": "science_and_nature-020",
+          "target": "Solar Panel",
+          "taboo": [
+            "energy",
+            "sun",
+            "roof",
+            "electricity",
+            "renewable"
+          ]
+        },
+        {
+          "id": "science_and_nature-021",
+          "target": "Recycling",
+          "taboo": [
+            "waste",
+            "bin",
+            "paper",
+            "plastic",
+            "environment"
+          ]
+        },
+        {
+          "id": "science_and_nature-022",
+          "target": "Comet",
+          "taboo": [
+            "space",
+            "tail",
+            "ice",
+            "orbit",
+            "telescope"
+          ]
+        },
+        {
+          "id": "science_and_nature-023",
+          "target": "Camouflage",
+          "taboo": [
+            "blend",
+            "hide",
+            "colors",
+            "military",
+            "surroundings"
+          ]
+        },
+        {
+          "id": "science_and_nature-024",
+          "target": "Hibernation",
+          "taboo": [
+            "winter",
+            "sleep",
+            "bear",
+            "cold",
+            "den"
+          ]
+        },
+        {
+          "id": "science_and_nature-025",
+          "target": "Meteor",
+          "taboo": [
+            "sky",
+            "fireball",
+            "rock",
+            "atmosphere",
+            "shooting star"
+          ]
+        },
+        {
+          "id": "science_and_nature-026",
+          "target": "Photosynthesis",
+          "taboo": [
+            "plants",
+            "sunlight",
+            "chlorophyll",
+            "oxygen",
+            "process"
+          ]
+        },
+        {
+          "id": "science_and_nature-027",
+          "target": "Earthquake",
+          "taboo": [
+            "ground",
+            "shake",
+            "fault",
+            "tremor",
+            "seismic"
+          ]
+        },
+        {
+          "id": "science_and_nature-028",
+          "target": "Constellation",
+          "taboo": [
+            "stars",
+            "pattern",
+            "night sky",
+            "zodiac",
+            "astronomy"
+          ]
+        },
+        {
+          "id": "science_and_nature-029",
+          "target": "Thermometer",
+          "taboo": [
+            "temperature",
+            "mercury",
+            "fever",
+            "measure",
+            "degrees"
+          ]
+        },
+        {
+          "id": "science_and_nature-030",
+          "target": "Ecosystem",
+          "taboo": [
+            "habitat",
+            "species",
+            "environment",
+            "balance",
+            "food chain"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "category": "Technology & Internet",
+      "language": "en",
+      "cards": [
+        {
+          "id": "technology_and_internet-001",
+          "target": "Laptop",
+          "taboo": [
+            "computer",
+            "screen",
+            "keyboard",
+            "portable",
+            "battery"
+          ]
+        },
+        {
+          "id": "technology_and_internet-002",
+          "target": "Smartphone",
+          "taboo": [
+            "phone",
+            "apps",
+            "touchscreen",
+            "call",
+            "pocket"
+          ]
+        },
+        {
+          "id": "technology_and_internet-003",
+          "target": "Password",
+          "taboo": [
+            "login",
+            "security",
+            "secret",
+            "account",
+            "characters"
+          ]
+        },
+        {
+          "id": "technology_and_internet-004",
+          "target": "Wi-Fi",
+          "taboo": [
+            "internet",
+            "wireless",
+            "router",
+            "signal",
+            "network"
+          ]
+        },
+        {
+          "id": "technology_and_internet-005",
+          "target": "Cloud Storage",
+          "taboo": [
+            "files",
+            "online",
+            "backup",
+            "sync",
+            "drive"
+          ]
+        },
+        {
+          "id": "technology_and_internet-006",
+          "target": "Keyboard",
+          "taboo": [
+            "type",
+            "keys",
+            "computer",
+            "letters",
+            "desk"
+          ]
+        },
+        {
+          "id": "technology_and_internet-007",
+          "target": "Screenshot",
+          "taboo": [
+            "screen",
+            "capture",
+            "image",
+            "save",
+            "display"
+          ]
+        },
+        {
+          "id": "technology_and_internet-008",
+          "target": "Algorithm",
+          "taboo": [
+            "code",
+            "instructions",
+            "logic",
+            "steps",
+            "compute"
+          ]
+        },
+        {
+          "id": "technology_and_internet-009",
+          "target": "Streaming",
+          "taboo": [
+            "video",
+            "music",
+            "online",
+            "watch",
+            "live"
+          ]
+        },
+        {
+          "id": "technology_and_internet-010",
+          "target": "Podcast",
+          "taboo": [
+            "audio",
+            "episodes",
+            "host",
+            "listen",
+            "microphone"
+          ]
+        },
+        {
+          "id": "technology_and_internet-011",
+          "target": "Drone",
+          "taboo": [
+            "flying",
+            "camera",
+            "remote",
+            "propellers",
+            "aerial"
+          ]
+        },
+        {
+          "id": "technology_and_internet-012",
+          "target": "3D Printer",
+          "taboo": [
+            "plastic",
+            "layer",
+            "design",
+            "machine",
+            "model"
+          ]
+        },
+        {
+          "id": "technology_and_internet-013",
+          "target": "USB Drive",
+          "taboo": [
+            "files",
+            "portable",
+            "storage",
+            "plug",
+            "flash"
+          ]
+        },
+        {
+          "id": "technology_and_internet-014",
+          "target": "Bluetooth",
+          "taboo": [
+            "wireless",
+            "pair",
+            "headphones",
+            "signal",
+            "connect"
+          ]
+        },
+        {
+          "id": "technology_and_internet-015",
+          "target": "Firewall",
+          "taboo": [
+            "security",
+            "network",
+            "block",
+            "protect",
+            "traffic"
+          ]
+        },
+        {
+          "id": "technology_and_internet-016",
+          "target": "Hashtag",
+          "taboo": [
+            "social media",
+            "pound sign",
+            "trend",
+            "post",
+            "viral"
+          ]
+        },
+        {
+          "id": "technology_and_internet-017",
+          "target": "Emoji",
+          "taboo": [
+            "text",
+            "face",
+            "message",
+            "symbol",
+            "smile"
+          ]
+        },
+        {
+          "id": "technology_and_internet-018",
+          "target": "Search Engine",
+          "taboo": [
+            "google",
+            "web",
+            "results",
+            "query",
+            "browser"
+          ]
+        },
+        {
+          "id": "technology_and_internet-019",
+          "target": "QR Code",
+          "taboo": [
+            "scan",
+            "square",
+            "phone",
+            "pattern",
+            "link"
+          ]
+        },
+        {
+          "id": "technology_and_internet-020",
+          "target": "Virtual Reality",
+          "taboo": [
+            "headset",
+            "immersive",
+            "simulation",
+            "goggles",
+            "gaming"
+          ]
+        },
+        {
+          "id": "technology_and_internet-021",
+          "target": "Notification",
+          "taboo": [
+            "alert",
+            "phone",
+            "pop-up",
+            "message",
+            "sound"
+          ]
+        },
+        {
+          "id": "technology_and_internet-022",
+          "target": "Spreadsheet",
+          "taboo": [
+            "cells",
+            "rows",
+            "columns",
+            "formula",
+            "excel"
+          ]
+        },
+        {
+          "id": "technology_and_internet-023",
+          "target": "Cursor",
+          "taboo": [
+            "mouse",
+            "arrow",
+            "screen",
+            "click",
+            "pointer"
+          ]
+        },
+        {
+          "id": "technology_and_internet-024",
+          "target": "Battery Saver",
+          "taboo": [
+            "power",
+            "phone",
+            "energy",
+            "low",
+            "mode"
+          ]
+        },
+        {
+          "id": "technology_and_internet-025",
+          "target": "Webcam",
+          "taboo": [
+            "camera",
+            "laptop",
+            "video call",
+            "lens",
+            "stream"
+          ]
+        },
+        {
+          "id": "technology_and_internet-026",
+          "target": "Autocorrect",
+          "taboo": [
+            "typing",
+            "spelling",
+            "phone",
+            "fix",
+            "keyboard"
+          ]
+        },
+        {
+          "id": "technology_and_internet-027",
+          "target": "Encryption",
+          "taboo": [
+            "security",
+            "code",
+            "data",
+            "protect",
+            "secret"
+          ]
+        },
+        {
+          "id": "technology_and_internet-028",
+          "target": "App Store",
+          "taboo": [
+            "download",
+            "mobile",
+            "install",
+            "phone",
+            "marketplace"
+          ]
+        },
+        {
+          "id": "technology_and_internet-029",
+          "target": "Touchpad",
+          "taboo": [
+            "laptop",
+            "finger",
+            "mouse",
+            "cursor",
+            "click"
+          ]
+        },
+        {
+          "id": "technology_and_internet-030",
+          "target": "Captcha",
+          "taboo": [
+            "robot",
+            "verify",
+            "checkbox",
+            "website",
+            "letters"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "category": "Entertainment & Pop Culture",
+      "language": "en",
+      "cards": [
+        {
+          "id": "entertainment_and_pop_culture-001",
+          "target": "Superhero",
+          "taboo": [
+            "cape",
+            "comic",
+            "powers",
+            "villain",
+            "mask"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-002",
+          "target": "Karaoke",
+          "taboo": [
+            "singing",
+            "microphone",
+            "lyrics",
+            "bar",
+            "performance"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-003",
+          "target": "Director",
+          "taboo": [
+            "film",
+            "camera",
+            "movie",
+            "action",
+            "set"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-004",
+          "target": "Binge-Watching",
+          "taboo": [
+            "episodes",
+            "series",
+            "sofa",
+            "streaming",
+            "weekend"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-005",
+          "target": "Violin",
+          "taboo": [
+            "strings",
+            "bow",
+            "orchestra",
+            "classical",
+            "instrument"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-006",
+          "target": "Magician",
+          "taboo": [
+            "tricks",
+            "cards",
+            "rabbit",
+            "illusion",
+            "stage"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-007",
+          "target": "Festival",
+          "taboo": [
+            "music",
+            "crowd",
+            "tents",
+            "summer",
+            "tickets"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-008",
+          "target": "Audience",
+          "taboo": [
+            "crowd",
+            "watch",
+            "clap",
+            "seats",
+            "theater"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-009",
+          "target": "Ballet",
+          "taboo": [
+            "dance",
+            "tutu",
+            "pointe",
+            "stage",
+            "graceful"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-010",
+          "target": "Joke",
+          "taboo": [
+            "funny",
+            "laugh",
+            "punchline",
+            "tell",
+            "comedian"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-011",
+          "target": "Puzzle",
+          "taboo": [
+            "pieces",
+            "jigsaw",
+            "solve",
+            "table",
+            "picture"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-012",
+          "target": "Chess",
+          "taboo": [
+            "king",
+            "queen",
+            "board",
+            "checkmate",
+            "strategy"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-013",
+          "target": "Mascot",
+          "taboo": [
+            "costume",
+            "team",
+            "stadium",
+            "character",
+            "school"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-014",
+          "target": "Fireworks",
+          "taboo": [
+            "sky",
+            "explode",
+            "colors",
+            "celebration",
+            "night"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-015",
+          "target": "Novel",
+          "taboo": [
+            "book",
+            "author",
+            "chapters",
+            "fiction",
+            "read"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-016",
+          "target": "Meme",
+          "taboo": [
+            "internet",
+            "funny",
+            "image",
+            "viral",
+            "caption"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-017",
+          "target": "Concert",
+          "taboo": [
+            "music",
+            "stage",
+            "tickets",
+            "crowd",
+            "live"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-018",
+          "target": "Applause",
+          "taboo": [
+            "clap",
+            "audience",
+            "performance",
+            "hands",
+            "cheer"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-019",
+          "target": "Graffiti",
+          "taboo": [
+            "wall",
+            "spray paint",
+            "street art",
+            "mural",
+            "urban"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-020",
+          "target": "Circus",
+          "taboo": [
+            "tent",
+            "clowns",
+            "acrobat",
+            "ringmaster",
+            "show"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-021",
+          "target": "Premiere",
+          "taboo": [
+            "first showing",
+            "red carpet",
+            "opening night",
+            "debut",
+            "film"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-022",
+          "target": "Lyrics",
+          "taboo": [
+            "song",
+            "words",
+            "sing",
+            "chorus",
+            "verse"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-023",
+          "target": "Drums",
+          "taboo": [
+            "beat",
+            "sticks",
+            "percussion",
+            "band",
+            "rhythm"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-024",
+          "target": "Comedian",
+          "taboo": [
+            "stand-up",
+            "jokes",
+            "funny",
+            "stage",
+            "laugh"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-025",
+          "target": "Album",
+          "taboo": [
+            "songs",
+            "record",
+            "release",
+            "musician",
+            "tracks"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-026",
+          "target": "Origami",
+          "taboo": [
+            "paper",
+            "fold",
+            "crane",
+            "Japan",
+            "art"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-027",
+          "target": "Spoiler",
+          "taboo": [
+            "ending",
+            "reveal",
+            "movie",
+            "surprise",
+            "plot"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-028",
+          "target": "Animation",
+          "taboo": [
+            "cartoon",
+            "drawings",
+            "frames",
+            "studio",
+            "movement"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-029",
+          "target": "Board Game",
+          "taboo": [
+            "dice",
+            "pieces",
+            "table",
+            "family",
+            "rules"
+          ]
+        },
+        {
+          "id": "entertainment_and_pop_culture-030",
+          "target": "Costume",
+          "taboo": [
+            "Halloween",
+            "dress-up",
+            "character",
+            "outfit",
+            "party"
+          ]
+        }
+      ]
+    }
+  ]
+}

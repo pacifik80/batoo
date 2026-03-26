@@ -16,6 +16,15 @@ from taboo_arena.models.manager import ModelManager
 from taboo_arena.models.registry import ModelEntry
 from tests.conftest import FakeModelManager
 
+CLUE_ALLOW = (
+    '{"allow":true,"block_reason_codes":[],"warnings":[],"matched_surface_forms":[],'
+    '"judge_version":"clue_judge_v1"}'
+)
+GUESS_CORRECT = (
+    '{"correct":true,"reason_codes":["exact_target_present"],"warnings":[],'
+    '"matched_surface_forms":["Bear"],"judge_version":"guess_judge_v1"}'
+)
+
 
 def _entry(
     model_id: str,
@@ -46,10 +55,7 @@ class _Registry:
 def test_round_stepper_matches_round_engine_behavior(sample_card, tmp_path: Path) -> None:
     responses = {
         "cluer": ["Bear clue", "forest giant"],
-        "judge": [
-            '{"verdict":"pass","reasons":[],"suspicious_terms":[],"confidence":0.9,"summary":"ok","judge_version":"v1"}',
-            '{"verdict":"pass","reasons":[],"suspicious_terms":[],"confidence":0.9,"summary":"ok","judge_version":"v1"}',
-        ],
+        "judge": [CLUE_ALLOW, GUESS_CORRECT],
         "guesser": ["Bear"],
     }
 
@@ -93,9 +99,7 @@ def test_live_round_adapter_delegates_to_canonical_stepper(sample_card, tmp_path
     manager = FakeModelManager(
         responses={
             "cluer": ["forest giant"],
-            "judge": [
-                '{"verdict":"pass","reasons":[],"suspicious_terms":[],"confidence":0.9,"summary":"ok","judge_version":"v1"}'
-            ],
+            "judge": [CLUE_ALLOW, GUESS_CORRECT],
             "guesser": ["Bear"],
         }
     )

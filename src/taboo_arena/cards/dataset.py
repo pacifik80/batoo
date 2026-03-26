@@ -16,6 +16,10 @@ from taboo_arena.config import DatasetSettings
 from taboo_arena.utils.normalization import dedupe_preserve_order, slugify
 from taboo_arena.utils.paths import ensure_app_dirs, get_dataset_dir
 
+LOCAL_BUNDLED_DATASET_DIR = Path(__file__).resolve().parents[3] / "taboo_cards_en"
+LOCAL_BUNDLED_SOURCE_REF = "bundled_en"
+LOCAL_BUNDLED_SOURCE_REPO = "local/taboo_cards_en"
+
 
 class DatasetError(RuntimeError):
     """Raised when dataset acquisition or parsing fails."""
@@ -24,9 +28,16 @@ class DatasetError(RuntimeError):
 class DatasetManager:
     """Download, import, cache, and serve the normalized card deck."""
 
-    def __init__(self, settings: DatasetSettings, dataset_root: Path | None = None) -> None:
+    def __init__(
+        self,
+        settings: DatasetSettings,
+        dataset_root: Path | None = None,
+        *,
+        bundled_source_root: Path | None = None,
+    ) -> None:
         self.settings = settings
         self.dataset_root = dataset_root or get_dataset_dir()
+        self.bundled_source_root = bundled_source_root or LOCAL_BUNDLED_DATASET_DIR
         ensure_app_dirs()
 
     def ensure_dataset(
@@ -36,10 +47,25 @@ class DatasetManager:
     ) -> ImportedDeck:
         """Return a cached deck or download and import it when missing."""
         ref = source_ref or self.settings.source_ref
+        bundled = self.load_bundled_deck(ref)
+        if bundled is not None:
+            return bundled
         cached = self.load_cached_deck(ref)
         if cached is not None:
             return cached
         return self.download_and_import(ref, logger=logger)
+
+    def load_bundled_deck(self, source_ref: str | None = None) -> ImportedDeck | None:
+        """Load the repository-bundled English deck when it is available."""
+        ref = source_ref or self.settings.source_ref
+        if not self._should_use_bundled_deck(ref):
+            return None
+        metadata = DatasetMetadata(
+            source_repo=LOCAL_BUNDLED_SOURCE_REPO,
+            source_ref=ref,
+            imported_language=self.settings.language,
+        )
+        return self.import_from_local_bundle(self.bundled_source_root, metadata)
 
     def download_and_import(
         self,
@@ -186,9 +212,84 @@ class DatasetManager:
         metadata.card_count = len(cards)
         return ImportedDeck(metadata=metadata, cards=cards)
 
+    def import_from_local_bundle(self, source_root: Path, metadata: DatasetMetadata) -> ImportedDeck:
+        """Import cards from the repository-local JSON bundle."""
+        if not source_root.exists():
+            raise DatasetError(f"Missing bundled dataset directory at {source_root}")
+
+        cards: list[CardRecord] = []
+        for category_file in sorted(source_root.glob("*.json")):
+            payload = json.loads(category_file.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                raise DatasetError(f"Expected a JSON object in {category_file}")
+            cards_payload = payload.get("cards")
+            if not isinstance(cards_payload, list):
+                raise DatasetError(f"Expected 'cards' list in {category_file}")
+
+            category_slug = category_file.stem
+            category_label = str(payload.get("category", category_slug))
+            for index, item in enumerate(cards_payload, start=1):
+                if not isinstance(item, dict):
+                    continue
+                target = item.get("target")
+                taboo_words_raw = item.get("taboo")
+                if not isinstance(target, str) or not isinstance(taboo_words_raw, list):
+                    continue
+                taboo_words = [
+                    word.strip()
+                    for word in taboo_words_raw
+                    if isinstance(word, str) and word.strip()
+                ]
+                if len(taboo_words) < 2:
+                    continue
+                aliases_raw = item.get("aliases", [])
+                aliases = (
+                    [
+                        alias.strip()
+                        for alias in aliases_raw
+                        if isinstance(alias, str) and alias.strip()
+                    ]
+                    if isinstance(aliases_raw, list)
+                    else []
+                )
+                card_id_raw = item.get("id")
+                card_id = (
+                    card_id_raw.strip()
+                    if isinstance(card_id_raw, str) and card_id_raw.strip()
+                    else f"{category_slug}:{slugify(target)}:{index:04d}"
+                )
+                cards.append(
+                    CardRecord(
+                        id=card_id,
+                        target=target.strip(),
+                        taboo_hard=dedupe_preserve_order(taboo_words),
+                        aliases=dedupe_preserve_order(aliases),
+                        difficulty=None,
+                        lang=metadata.imported_language,
+                        source_category=category_slug,
+                        source_repo=metadata.source_repo,
+                        source_ref=metadata.source_ref,
+                        source_commit=metadata.source_commit,
+                        category_label=category_label,
+                    )
+                )
+
+        if not cards:
+            raise DatasetError("No English cards were imported from the local bundled dataset.")
+
+        metadata.card_count = len(cards)
+        return ImportedDeck(metadata=metadata, cards=cards)
+
     def _ref_dir(self, source_ref: str) -> Path:
         repo_slug = self.settings.source_repo.replace("/", "__")
         return self.dataset_root / repo_slug / slugify(source_ref)
+
+    def _should_use_bundled_deck(self, source_ref: str) -> bool:
+        if self.settings.language != "en":
+            return False
+        if not self.bundled_source_root.exists() or not self.bundled_source_root.is_dir():
+            return False
+        return source_ref in {LOCAL_BUNDLED_SOURCE_REF, "main"}
 
     @staticmethod
     def _build_archive_url(repo: str, ref: str) -> str:
@@ -229,4 +330,3 @@ class DatasetManager:
         (repo_dir / "metadata.json").write_text(deck.metadata.model_dump_json(indent=2), encoding="utf-8")
         deck_payload = [card.model_dump(mode="json") for card in deck.cards]
         (repo_dir / "deck.json").write_text(json.dumps(deck_payload, indent=2), encoding="utf-8")
-

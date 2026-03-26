@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "category": "Science & Nature",
+  "language": "en",
+  "cards": [
+    {
+      "id": "science_and_nature-001",
+      "target": "Tornado",
+      "taboo": [
+        "storm",
+        "funnel",
+        "wind",
+        "damage",
+        "twister"
+      ]
+    },
+    {
+      "id": "science_and_nature-002",
+      "target": "Rainbow",
+      "taboo": [
+        "colors",
+        "sky",
+        "rain",
+        "arc",
+        "mythical pot"
+      ]
+    },
+    {
+      "id": "science_and_nature-003",
+      "target": "Penguin",
+      "taboo": [
+        "bird",
+        "Antarctica",
+        "tuxedo",
+        "waddle",
+        "ice"
+      ]
+    },
+    {
+      "id": "science_and_nature-004",
+      "target": "Dolphin",
+      "taboo": [
+        "ocean",
+        "mammal",
+        "intelligent",
+        "fin",
+        "swim"
+      ]
+    },
+    {
+      "id": "science_and_nature-005",
+      "target": "Cactus",
+      "taboo": [
+        "desert",
+        "spines",
+        "plant",
+        "dry",
+        "pot"
+      ]
+    },
+    {
+      "id": "science_and_nature-006",
+      "target": "Glacier",
+      "taboo": [
+        "ice",
+        "melting",
+        "mountain",
+        "blue",
+        "climate"
+      ]
+    },
+    {
+      "id": "science_and_nature-007",
+      "target": "Owl",
+      "taboo": [
+        "night",
+        "bird",
+        "hoot",
+        "wisdom",
+        "feathers"
+      ]
+    },
+    {
+      "id": "science_and_nature-008",
+      "target": "Butterfly",
+      "taboo": [
+        "wings",
+        "caterpillar",
+        "insect",
+        "colorful",
+        "garden"
+      ]
+    },
+    {
+      "id": "science_and_nature-009",
+      "target": "Thunder",
+      "taboo": [
+        "storm",
+        "loud",
+        "sky",
+        "lightning",
+        "rumble"
+      ]
+    },
+    {
+      "id": "science_and_nature-010",
+      "target": "Eclipse",
+      "taboo": [
+        "moon",
+        "sun",
+        "shadow",
+        "astronomy",
+        "darken"
+      ]
+    },
+    {
+      "id": "science_and_nature-011",
+      "target": "Jungle",
+      "taboo": [
+        "rainforest",
+        "dense",
+        "vines",
+        "tropical",
+        "wild"
+      ]
+    },
+    {
+      "id": "science_and_nature-012",
+      "target": "Coral Reef",
+      "taboo": [
+        "ocean",
+        "fish",
+        "colorful",
+        "diving",
+        "barrier"
+      ]
+    },
+    {
+      "id": "science_and_nature-013",
+      "target": "Fossil",
+      "taboo": [
+        "dinosaur",
+        "rock",
+        "ancient",
+        "bones",
+        "dig"
+      ]
+    },
+    {
+      "id": "science_and_nature-014",
+      "target": "Planet",
+      "taboo": [
+        "orbit",
+        "space",
+        "world",
+        "solar system",
+        "round"
+      ]
+    },
+    {
+      "id": "science_and_nature-015",
+      "target": "Gravity",
+      "taboo": [
+        "fall",
+        "force",
+        "earth",
+        "weight",
+        "physics"
+      ]
+    },
+    {
+      "id": "science_and_nature-016",
+      "target": "Microscope",
+      "taboo": [
+        "lab",
+        "magnify",
+        "lens",
+        "tiny",
+        "science"
+      ]
+    },
+    {
+      "id": "science_and_nature-017",
+      "target": "DNA",
+      "taboo": [
+        "genes",
+        "double helix",
+        "biology",
+        "cells",
+        "inherit"
+      ]
+    },
+    {
+      "id": "science_and_nature-018",
+      "target": "Robot",
+      "taboo": [
+        "machine",
+        "metal",
+        "program",
+        "human-like",
+        "automate"
+      ]
+    },
+    {
+      "id": "science_and_nature-019",
+      "target": "Bacteria",
+      "taboo": [
+        "germs",
+        "microscopic",
+        "cells",
+        "infection",
+        "culture"
+      ]
+    },
+    {
+      "id": "science_and_nature-020",
+      "target": "Solar Panel",
+      "taboo": [
+        "energy",
+        "sun",
+        "roof",
+        "electricity",
+        "renewable"
+      ]
+    },
+    {
+      "id": "science_and_nature-021",
+      "target": "Recycling",
+      "taboo": [
+        "waste",
+        "bin",
+        "paper",
+        "plastic",
+        "environment"
+      ]
+    },
+    {
+      "id": "science_and_nature-022",
+      "target": "Comet",
+      "taboo": [
+        "space",
+        "tail",
+        "ice",
+        "orbit",
+        "telescope"
+      ]
+    },
+    {
+      "id": "science_and_nature-023",
+      "target": "Camouflage",
+      "taboo": [
+        "blend",
+        "hide",
+        "colors",
+        "military",
+        "surroundings"
+      ]
+    },
+    {
+      "id": "science_and_nature-024",
+      "target": "Hibernation",
+      "taboo": [
+        "winter",
+        "sleep",
+        "bear",
+        "cold",
+        "den"
+      ]
+    },
+    {
+      "id": "science_and_nature-025",
+      "target": "Meteor",
+      "taboo": [
+        "sky",
+        "fireball",
+        "rock",
+        "atmosphere",
+        "shooting star"
+      ]
+    },
+    {
+      "id": "science_and_nature-026",
+      "target": "Photosynthesis",
+      "taboo": [
+        "plants",
+        "sunlight",
+        "chlorophyll",
+        "oxygen",
+        "process"
+      ]
+    },
+    {
+      "id": "science_and_nature-027",
+      "target": "Earthquake",
+      "taboo": [
+        "ground",
+        "shake",
+        "fault",
+        "tremor",
+        "seismic"
+      ]
+    },
+    {
+      "id": "science_and_nature-028",
+      "target": "Constellation",
+      "taboo": [
+        "stars",
+        "pattern",
+        "night sky",
+        "zodiac",
+        "astronomy"
+      ]
+    },
+    {
+      "id": "science_and_nature-029",
+      "target": "Thermometer",
+      "taboo": [
+        "temperature",
+        "mercury",
+        "fever",
+        "measure",
+        "degrees"
+      ]
+    },
+    {
+      "id": "science_and_nature-030",
+      "target": "Ecosystem",
+      "taboo": [
+        "habitat",
+        "species",
+        "environment",
+        "balance",
+        "food chain"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "judge_guess",
+  "description": "Role prompt for final visible guess arbitration.",
+  "messages": [
+    {
+      "role": "user",
+      "template": "You are the Judge in a Taboo benchmark. Your only job is to decide whether the final visible guess counts as the target answer.\n\nCurrent assignment: verify the visible guess for attempt {{ attempt_no }}.\nTarget: {{ target }}.\nVisible guess: {{ guess_text }}.\nDeterministic matcher status: {{ deterministic_match_status }}.\nDeterministic matcher reason: {{ deterministic_match_reason }}.\nCandidate answer spans: {{ candidate_spans_json }}.\nDeterministic warnings: {{ deterministic_warnings_json }}.\n\nDecision rules: if the target answer appears anywhere in the visible guess as an answer candidate, mark correct true even if the formatting is messy or there are extra wrapper words. Do not require perfectly clean formatting. Do not upgrade broad semantic similarity to a correct answer when the target is absent.\n\nOutput contract: return strict JSON only with this schema and no markdown, prose, or chain-of-thought: {{ output_schema_json }}"
+    }
+  ]
+}

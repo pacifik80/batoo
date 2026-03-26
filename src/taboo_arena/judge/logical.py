@@ -68,7 +68,7 @@ class LogicalValidator:
         if normalized and normalized in previous_rejected_normalized:
             violations.append("repeated_rejected_clue")
 
-        comparison_terms = [card.target, *card.taboo_hard, *card.aliases]
+        comparison_terms = [card.target, *card.taboo_hard]
         for term in comparison_terms:
             matched = self._match_term(
                 term=term,

@@ -10,6 +10,7 @@ from time import perf_counter
 from typing import Any, Protocol, TypeVar, cast
 
 from taboo_arena.config import GenerationParams
+from taboo_arena.models.constraint_compiler import CompiledConstraints
 
 T = TypeVar("T")
 
@@ -49,6 +50,7 @@ class TextGenerationBackend(Protocol):
         stop_tokens: list[str],
         prompt_template_id: str,
         banned_phrases: list[str] | None = None,
+        compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:
         """Generate text from a rendered prompt."""
 
@@ -211,6 +213,7 @@ class TransformersGenerator:
         stop_tokens: list[str],
         prompt_template_id: str,
         banned_phrases: list[str] | None = None,
+        compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:
         try:
             started = perf_counter()
@@ -218,7 +221,11 @@ class TransformersGenerator:
             model_device = getattr(self.model, "device", None)
             if model_device is not None:
                 inputs = {name: tensor.to(model_device) for name, tensor in inputs.items()}
-            bad_words_ids = _build_bad_words_ids(self.tokenizer, banned_phrases or [])
+            bad_words_ids = (
+                list(compiled_constraints.transformers_bad_words_ids)
+                if compiled_constraints is not None
+                else _build_bad_words_ids(self.tokenizer, banned_phrases or [])
+            )
             generation = self.model.generate(
                 **inputs,
                 do_sample=generation_params.temperature > 0,
@@ -324,6 +331,7 @@ class LlamaCppGenerator:
         stop_tokens: list[str],
         prompt_template_id: str,
         banned_phrases: list[str] | None = None,
+        compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:
         try:
             started = perf_counter()

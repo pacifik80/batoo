@@ -65,6 +65,7 @@ class RunSettings(BaseModel):
 
     max_guess_attempts: int = Field(default=3, ge=1, le=10)
     max_clue_repairs: int = Field(default=3, ge=1, le=10)
+    guesser_hidden_retry_budget: int = Field(default=2, ge=0, le=10)
     block_on_uncertain: bool = False
     memory_policy: MemoryPolicy = "keep_loaded_if_possible"
     random_seed: int = 7

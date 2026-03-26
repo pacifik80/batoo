@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "category": "Travel & Places",
+  "language": "en",
+  "cards": [
+    {
+      "id": "travel_and_places-001",
+      "target": "Airport",
+      "taboo": [
+        "plane",
+        "security",
+        "terminal",
+        "gate",
+        "luggage"
+      ]
+    },
+    {
+      "id": "travel_and_places-002",
+      "target": "Hotel",
+      "taboo": [
+        "room",
+        "vacation",
+        "check-in",
+        "lobby",
+        "reservation"
+      ]
+    },
+    {
+      "id": "travel_and_places-003",
+      "target": "Beach",
+      "taboo": [
+        "sand",
+        "ocean",
+        "sunscreen",
+        "waves",
+        "towel"
+      ]
+    },
+    {
+      "id": "travel_and_places-004",
+      "target": "Museum",
+      "taboo": [
+        "art",
+        "exhibit",
+        "history",
+        "gallery",
+        "tickets"
+      ]
+    },
+    {
+      "id": "travel_and_places-005",
+      "target": "Mountain",
+      "taboo": [
+        "climb",
+        "peak",
+        "hiking",
+        "snow",
+        "trail"
+      ]
+    },
+    {
+      "id": "travel_and_places-006",
+      "target": "Subway",
+      "taboo": [
+        "train",
+        "underground",
+        "station",
+        "city",
+        "tunnel"
+      ]
+    },
+    {
+      "id": "travel_and_places-007",
+      "target": "Bridge",
+      "taboo": [
+        "river",
+        "cross",
+        "structure",
+        "traffic",
+        "suspension"
+      ]
+    },
+    {
+      "id": "travel_and_places-008",
+      "target": "Desert",
+      "taboo": [
+        "sand",
+        "dry",
+        "cactus",
+        "hot",
+        "camel"
+      ]
+    },
+    {
+      "id": "travel_and_places-009",
+      "target": "Island",
+      "taboo": [
+        "ocean",
+        "surrounded",
+        "tropical",
+        "boat",
+        "coast"
+      ]
+    },
+    {
+      "id": "travel_and_places-010",
+      "target": "Customs",
+      "taboo": [
+        "border",
+        "airport",
+        "suitcase",
+        "declare",
+        "officer"
+      ]
+    },
+    {
+      "id": "travel_and_places-011",
+      "target": "Campground",
+      "taboo": [
+        "tent",
+        "fire",
+        "forest",
+        "reservation",
+        "outdoors"
+      ]
+    },
+    {
+      "id": "travel_and_places-012",
+      "target": "Cruise",
+      "taboo": [
+        "ship",
+        "vacation",
+        "ocean",
+        "buffet",
+        "cabin"
+      ]
+    },
+    {
+      "id": "travel_and_places-013",
+      "target": "Map",
+      "taboo": [
+        "directions",
+        "route",
+        "paper",
+        "location",
+        "fold"
+      ]
+    },
+    {
+      "id": "travel_and_places-014",
+      "target": "Souvenir",
+      "taboo": [
+        "gift",
+        "travel",
+        "remember",
+        "shop",
+        "tourist"
+      ]
+    },
+    {
+      "id": "travel_and_places-015",
+      "target": "Taxi",
+      "taboo": [
+        "cab",
+        "meter",
+        "driver",
+        "city",
+        "yellow"
+      ]
+    },
+    {
+      "id": "travel_and_places-016",
+      "target": "Backpacking",
+      "taboo": [
+        "hostel",
+        "trail",
+        "trip",
+        "budget",
+        "rucksack"
+      ]
+    },
+    {
+      "id": "travel_and_places-017",
+      "target": "Temple",
+      "taboo": [
+        "worship",
+        "ancient",
+        "prayer",
+        "stone",
+        "shrine"
+      ]
+    },
+    {
+      "id": "travel_and_places-018",
+      "target": "Waterfall",
+      "taboo": [
+        "river",
+        "falling",
+        "cliff",
+        "nature",
+        "spray"
+      ]
+    },
+    {
+      "id": "travel_and_places-019",
+      "target": "Skyscraper",
+      "taboo": [
+        "tall",
+        "city",
+        "office",
+        "windows",
+        "tower"
+      ]
+    },
+    {
+      "id": "travel_and_places-020",
+      "target": "Roundabout",
+      "taboo": [
+        "circle",
+        "traffic",
+        "exit",
+        "road",
+        "intersection"
+      ]
+    },
+    {
+      "id": "travel_and_places-021",
+      "target": "Border",
+      "taboo": [
+        "country",
+        "crossing",
+        "passport",
+        "line",
+        "fence"
+      ]
+    },
+    {
+      "id": "travel_and_places-022",
+      "target": "Hostel",
+      "taboo": [
+        "bunk",
+        "cheap",
+        "travelers",
+        "dorm",
+        "backpacker"
+      ]
+    },
+    {
+      "id": "travel_and_places-023",
+      "target": "Lighthouse",
+      "taboo": [
+        "coast",
+        "ships",
+        "tower",
+        "ocean",
+        "beacon"
+      ]
+    },
+    {
+      "id": "travel_and_places-024",
+      "target": "Volcano",
+      "taboo": [
+        "lava",
+        "eruption",
+        "mountain",
+        "ash",
+        "crater"
+      ]
+    },
+    {
+      "id": "travel_and_places-025",
+      "target": "Amusement Park",
+      "taboo": [
+        "rides",
+        "roller coaster",
+        "tickets",
+        "families",
+        "theme"
+      ]
+    },
+    {
+      "id": "travel_and_places-026",
+      "target": "Harbor",
+      "taboo": [
+        "boats",
+        "docks",
+        "water",
+        "port",
+        "marina"
+      ]
+    },
+    {
+      "id": "travel_and_places-027",
+      "target": "Monument",
+      "taboo": [
+        "statue",
+        "landmark",
+        "history",
+        "memorial",
+        "tourists"
+      ]
+    },
+    {
+      "id": "travel_and_places-028",
+      "target": "Trail",
+      "taboo": [
+        "hike",
+        "forest",
+        "path",
+        "boots",
+        "map"
+      ]
+    },
+    {
+      "id": "travel_and_places-029",
+      "target": "Castle",
+      "taboo": [
+        "king",
+        "stone",
+        "medieval",
+        "tower",
+        "moat"
+      ]
+    },
+    {
+      "id": "travel_and_places-030",
+      "target": "Village",
+      "taboo": [
+        "small town",
+        "countryside",
+        "locals",
+        "square",
+        "rural"
+      ]
+    }
+  ]
+}

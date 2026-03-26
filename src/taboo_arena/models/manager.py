@@ -20,6 +20,7 @@ from taboo_arena.models.backends import (
     TransformersGenerator,
     unload_backend_resources,
 )
+from taboo_arena.models.constraint_compiler import ConstraintCompiler
 from taboo_arena.models.registry import ModelEntry
 from taboo_arena.prompts import PromptMessage, render_prompt
 from taboo_arena.utils.system import (
@@ -51,6 +52,7 @@ class ModelManager:
 
     def __init__(self, logger: Any | None = None) -> None:
         self.logger = logger
+        self.constraint_compiler = ConstraintCompiler()
         self.loaded_models: dict[str, TextGenerationBackend] = {}
         self._active_runtime_policy: MemoryPolicy = "keep_loaded_if_possible"
 
@@ -268,12 +270,20 @@ class ModelManager:
                 prompt=rendered.prompt,
                 generation_params=generation_params.model_dump(mode="json"),
             )
+        compiled_constraints = self.constraint_compiler.compile(
+            role=trace_role,
+            model_entry=model_entry,
+            backend=backend,
+            forbidden_surface_forms=list(banned_phrases or []),
+            json_output_required=_role_requires_json_constraints(trace_role),
+        )
         response = backend.generate(
             prompt=rendered.prompt,
             generation_params=generation_params,
             stop_tokens=rendered.stop_tokens,
             prompt_template_id=rendered.prompt_template_id,
             banned_phrases=banned_phrases,
+            compiled_constraints=compiled_constraints,
         )
         if self.logger is not None and hasattr(self.logger, "trace_response"):
             self.logger.trace_response(
@@ -470,3 +480,8 @@ class ModelManager:
             peak_active_vram_gb <= snapshot.vram_available_gb * 0.85
             and total_estimated_vram_gb <= snapshot.ram_available_gb * 0.85
         )
+
+
+def _role_requires_json_constraints(role: str) -> bool:
+    """Return whether the role is expected to emit strict JSON output."""
+    return role in {"cluer", "guesser", "judge"}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "language": "en",
+  "description": "Original taboo-style word guessing cards in English, grouped by category.",
+  "categories": [
+    {
+      "slug": "everyday_life",
+      "category": "Everyday Life",
+      "file": "everyday_life.json",
+      "card_count": 30
+    },
+    {
+      "slug": "food_and_drink",
+      "category": "Food & Drink",
+      "file": "food_and_drink.json",
+      "card_count": 30
+    },
+    {
+      "slug": "travel_and_places",
+      "category": "Travel & Places",
+      "file": "travel_and_places.json",
+      "card_count": 30
+    },
+    {
+      "slug": "science_and_nature",
+      "category": "Science & Nature",
+      "file": "science_and_nature.json",
+      "card_count": 30
+    },
+    {
+      "slug": "technology_and_internet",
+      "category": "Technology & Internet",
+      "file": "technology_and_internet.json",
+      "card_count": 30
+    },
+    {
+      "slug": "entertainment_and_pop_culture",
+      "category": "Entertainment & Pop Culture",
+      "file": "entertainment_and_pop_culture.json",
+      "card_count": 30
+    }
+  ]
+}

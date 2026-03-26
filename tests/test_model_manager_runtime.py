@@ -4,6 +4,7 @@ from pathlib import Path
 
 from taboo_arena.config import GenerationParams
 from taboo_arena.models.backends import GenerationResponse
+from taboo_arena.models.constraint_compiler import CompiledConstraints
 from taboo_arena.models.manager import ModelManager
 from taboo_arena.models.registry import ModelEntry
 from taboo_arena.prompts import PromptMessage
@@ -41,8 +42,10 @@ class _FakeBackend:
         stop_tokens: list[str],
         prompt_template_id: str,
         banned_phrases: list[str] | None = None,
+        compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:
         self.last_banned_phrases = list(banned_phrases or [])
+        self.last_compiled_constraints = compiled_constraints
         return GenerationResponse(
             text="ok",
             prompt_tokens=10,
@@ -264,3 +267,51 @@ def test_generate_forwards_banned_phrases_to_backend(monkeypatch, tmp_path: Path
     backend = next(iter(manager.loaded_models.values()))
     assert isinstance(backend, _FakeBackend)
     assert backend.last_banned_phrases == ["Indiana Jones", "actor"]
+
+
+def test_generate_compiles_constraints_per_role_and_model(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("taboo_arena.models.manager.TransformersGenerator", _FakeBackend)
+    monkeypatch.setattr(
+        "taboo_arena.models.manager.get_runtime_diagnostics",
+        lambda: _FakeRuntimeDiagnostics(),
+    )
+
+    manager = ModelManager()
+    monkeypatch.setattr(manager, "ensure_model_available", lambda entry: tmp_path / entry.id)
+    messages = [PromptMessage(role="user", content="Return JSON only.")]
+    params = GenerationParams()
+
+    manager.generate(
+        model_entry=_entry("cluer-a", "repo-a"),
+        messages=messages,
+        generation_params=params,
+        runtime_policy="keep_loaded_if_possible",
+        device_preference="auto",
+        trace_role="cluer",
+        banned_phrases=["Bear", "grizzly"],
+    )
+    manager.generate(
+        model_entry=_entry("judge-a", "repo-b"),
+        messages=messages,
+        generation_params=params,
+        runtime_policy="keep_loaded_if_possible",
+        device_preference="auto",
+        trace_role="judge",
+        banned_phrases=[],
+    )
+
+    loaded = list(manager.loaded_models.values())
+    assert len(loaded) == 2
+    cluer_backend = loaded[0]
+    judge_backend = loaded[1]
+    assert isinstance(cluer_backend, _FakeBackend)
+    assert isinstance(judge_backend, _FakeBackend)
+    assert cluer_backend.last_compiled_constraints is not None
+    assert cluer_backend.last_compiled_constraints.role == "cluer"
+    assert cluer_backend.last_compiled_constraints.model_id == "cluer-a"
+    assert cluer_backend.last_compiled_constraints.forbidden_surface_forms == ["Bear", "grizzly"]
+    assert cluer_backend.last_compiled_constraints.json_output_required is True
+    assert judge_backend.last_compiled_constraints is not None
+    assert judge_backend.last_compiled_constraints.role == "judge"
+    assert judge_backend.last_compiled_constraints.model_id == "judge-a"
+    assert judge_backend.last_compiled_constraints.forbidden_surface_forms == []

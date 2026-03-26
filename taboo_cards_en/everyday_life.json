@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "category": "Everyday Life",
+  "language": "en",
+  "cards": [
+    {
+      "id": "everyday_life-001",
+      "target": "Umbrella",
+      "taboo": [
+        "rain",
+        "wet",
+        "storm",
+        "carry",
+        "open"
+      ]
+    },
+    {
+      "id": "everyday_life-002",
+      "target": "Backpack",
+      "taboo": [
+        "bag",
+        "school",
+        "straps",
+        "carry",
+        "shoulder"
+      ]
+    },
+    {
+      "id": "everyday_life-003",
+      "target": "Mirror",
+      "taboo": [
+        "reflection",
+        "glass",
+        "face",
+        "look",
+        "wall"
+      ]
+    },
+    {
+      "id": "everyday_life-004",
+      "target": "Pillow",
+      "taboo": [
+        "sleep",
+        "bed",
+        "soft",
+        "head",
+        "cushion"
+      ]
+    },
+    {
+      "id": "everyday_life-005",
+      "target": "Toothbrush",
+      "taboo": [
+        "teeth",
+        "toothpaste",
+        "bathroom",
+        "dentist",
+        "bristles"
+      ]
+    },
+    {
+      "id": "everyday_life-006",
+      "target": "Sunglasses",
+      "taboo": [
+        "sun",
+        "eyes",
+        "wear",
+        "shade",
+        "summer"
+      ]
+    },
+    {
+      "id": "everyday_life-007",
+      "target": "Elevator",
+      "taboo": [
+        "building",
+        "floor",
+        "buttons",
+        "up",
+        "down"
+      ]
+    },
+    {
+      "id": "everyday_life-008",
+      "target": "Wallet",
+      "taboo": [
+        "money",
+        "cards",
+        "pocket",
+        "cash",
+        "leather"
+      ]
+    },
+    {
+      "id": "everyday_life-009",
+      "target": "Alarm Clock",
+      "taboo": [
+        "wake",
+        "morning",
+        "time",
+        "ring",
+        "snooze"
+      ]
+    },
+    {
+      "id": "everyday_life-010",
+      "target": "Blanket",
+      "taboo": [
+        "warm",
+        "bed",
+        "cover",
+        "sleep",
+        "soft"
+      ]
+    },
+    {
+      "id": "everyday_life-011",
+      "target": "Scissors",
+      "taboo": [
+        "cut",
+        "paper",
+        "blades",
+        "sharp",
+        "school"
+      ]
+    },
+    {
+      "id": "everyday_life-012",
+      "target": "Bicycle",
+      "taboo": [
+        "pedal",
+        "wheels",
+        "ride",
+        "helmet",
+        "chain"
+      ]
+    },
+    {
+      "id": "everyday_life-013",
+      "target": "Flashlight",
+      "taboo": [
+        "light",
+        "dark",
+        "battery",
+        "camping",
+        "beam"
+      ]
+    },
+    {
+      "id": "everyday_life-014",
+      "target": "Suitcase",
+      "taboo": [
+        "travel",
+        "airport",
+        "clothes",
+        "luggage",
+        "wheels"
+      ]
+    },
+    {
+      "id": "everyday_life-015",
+      "target": "Passport",
+      "taboo": [
+        "country",
+        "travel",
+        "border",
+        "stamp",
+        "document"
+      ]
+    },
+    {
+      "id": "everyday_life-016",
+      "target": "Receipt",
+      "taboo": [
+        "store",
+        "paper",
+        "buy",
+        "proof",
+        "total"
+      ]
+    },
+    {
+      "id": "everyday_life-017",
+      "target": "Keychain",
+      "taboo": [
+        "keys",
+        "ring",
+        "pocket",
+        "metal",
+        "car"
+      ]
+    },
+    {
+      "id": "everyday_life-018",
+      "target": "Laundry",
+      "taboo": [
+        "clothes",
+        "wash",
+        "dryer",
+        "dirty",
+        "basket"
+      ]
+    },
+    {
+      "id": "everyday_life-019",
+      "target": "Remote Control",
+      "taboo": [
+        "television",
+        "buttons",
+        "channel",
+        "couch",
+        "battery"
+      ]
+    },
+    {
+      "id": "everyday_life-020",
+      "target": "Headphones",
+      "taboo": [
+        "music",
+        "ears",
+        "listen",
+        "wireless",
+        "sound"
+      ]
+    },
+    {
+      "id": "everyday_life-021",
+      "target": "Notebook",
+      "taboo": [
+        "paper",
+        "write",
+        "pages",
+        "school",
+        "spiral"
+      ]
+    },
+    {
+      "id": "everyday_life-022",
+      "target": "Calendar",
+      "taboo": [
+        "date",
+        "month",
+        "year",
+        "schedule",
+        "wall"
+      ]
+    },
+    {
+      "id": "everyday_life-023",
+      "target": "Mug",
+      "taboo": [
+        "coffee",
+        "cup",
+        "handle",
+        "tea",
+        "drink"
+      ]
+    },
+    {
+      "id": "everyday_life-024",
+      "target": "Towel",
+      "taboo": [
+        "bathroom",
+        "dry",
+        "shower",
+        "beach",
+        "cloth"
+      ]
+    },
+    {
+      "id": "everyday_life-025",
+      "target": "Charger",
+      "taboo": [
+        "phone",
+        "battery",
+        "cable",
+        "plug",
+        "power"
+      ]
+    },
+    {
+      "id": "everyday_life-026",
+      "target": "Doorbell",
+      "taboo": [
+        "front door",
+        "ring",
+        "visitor",
+        "press",
+        "house"
+      ]
+    },
+    {
+      "id": "everyday_life-027",
+      "target": "Traffic Light",
+      "taboo": [
+        "red",
+        "green",
+        "yellow",
+        "intersection",
+        "stop"
+      ]
+    },
+    {
+      "id": "everyday_life-028",
+      "target": "Escalator",
+      "taboo": [
+        "stairs",
+        "mall",
+        "moving",
+        "up",
+        "down"
+      ]
+    },
+    {
+      "id": "everyday_life-029",
+      "target": "Trash Can",
+      "taboo": [
+        "garbage",
+        "bin",
+        "kitchen",
+        "throw",
+        "waste"
+      ]
+    },
+    {
+      "id": "everyday_life-030",
+      "target": "Vacuum Cleaner",
+      "taboo": [
+        "floor",
+        "dust",
+        "clean",
+        "carpet",
+        "machine"
+      ]
+    }
+  ]
+}

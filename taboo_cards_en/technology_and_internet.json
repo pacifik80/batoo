@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "category": "Technology & Internet",
+  "language": "en",
+  "cards": [
+    {
+      "id": "technology_and_internet-001",
+      "target": "Laptop",
+      "taboo": [
+        "computer",
+        "screen",
+        "keyboard",
+        "portable",
+        "battery"
+      ]
+    },
+    {
+      "id": "technology_and_internet-002",
+      "target": "Smartphone",
+      "taboo": [
+        "phone",
+        "apps",
+        "touchscreen",
+        "call",
+        "pocket"
+      ]
+    },
+    {
+      "id": "technology_and_internet-003",
+      "target": "Password",
+      "taboo": [
+        "login",
+        "security",
+        "secret",
+        "account",
+        "characters"
+      ]
+    },
+    {
+      "id": "technology_and_internet-004",
+      "target": "Wi-Fi",
+      "taboo": [
+        "internet",
+        "wireless",
+        "router",
+        "signal",
+        "network"
+      ]
+    },
+    {
+      "id": "technology_and_internet-005",
+      "target": "Cloud Storage",
+      "taboo": [
+        "files",
+        "online",
+        "backup",
+        "sync",
+        "drive"
+      ]
+    },
+    {
+      "id": "technology_and_internet-006",
+      "target": "Keyboard",
+      "taboo": [
+        "type",
+        "keys",
+        "computer",
+        "letters",
+        "desk"
+      ]
+    },
+    {
+      "id": "technology_and_internet-007",
+      "target": "Screenshot",
+      "taboo": [
+        "screen",
+        "capture",
+        "image",
+        "save",
+        "display"
+      ]
+    },
+    {
+      "id": "technology_and_internet-008",
+      "target": "Algorithm",
+      "taboo": [
+        "code",
+        "instructions",
+        "logic",
+        "steps",
+        "compute"
+      ]
+    },
+    {
+      "id": "technology_and_internet-009",
+      "target": "Streaming",
+      "taboo": [
+        "video",
+        "music",
+        "online",
+        "watch",
+        "live"
+      ]
+    },
+    {
+      "id": "technology_and_internet-010",
+      "target": "Podcast",
+      "taboo": [
+        "audio",
+        "episodes",
+        "host",
+        "listen",
+        "microphone"
+      ]
+    },
+    {
+      "id": "technology_and_internet-011",
+      "target": "Drone",
+      "taboo": [
+        "flying",
+        "camera",
+        "remote",
+        "propellers",
+        "aerial"
+      ]
+    },
+    {
+      "id": "technology_and_internet-012",
+      "target": "3D Printer",
+      "taboo": [
+        "plastic",
+        "layer",
+        "design",
+        "machine",
+        "model"
+      ]
+    },
+    {
+      "id": "technology_and_internet-013",
+      "target": "USB Drive",
+      "taboo": [
+        "files",
+        "portable",
+        "storage",
+        "plug",
+        "flash"
+      ]
+    },
+    {
+      "id": "technology_and_internet-014",
+      "target": "Bluetooth",
+      "taboo": [
+        "wireless",
+        "pair",
+        "headphones",
+        "signal",
+        "connect"
+      ]
+    },
+    {
+      "id": "technology_and_internet-015",
+      "target": "Firewall",
+      "taboo": [
+        "security",
+        "network",
+        "block",
+        "protect",
+        "traffic"
+      ]
+    },
+    {
+      "id": "technology_and_internet-016",
+      "target": "Hashtag",
+      "taboo": [
+        "social media",
+        "pound sign",
+        "trend",
+        "post",
+        "viral"
+      ]
+    },
+    {
+      "id": "technology_and_internet-017",
+      "target": "Emoji",
+      "taboo": [
+        "text",
+        "face",
+        "message",
+        "symbol",
+        "smile"
+      ]
+    },
+    {
+      "id": "technology_and_internet-018",
+      "target": "Search Engine",
+      "taboo": [
+        "google",
+        "web",
+        "results",
+        "query",
+        "browser"
+      ]
+    },
+    {
+      "id": "technology_and_internet-019",
+      "target": "QR Code",
+      "taboo": [
+        "scan",
+        "square",
+        "phone",
+        "pattern",
+        "link"
+      ]
+    },
+    {
+      "id": "technology_and_internet-020",
+      "target": "Virtual Reality",
+      "taboo": [
+        "headset",
+        "immersive",
+        "simulation",
+        "goggles",
+        "gaming"
+      ]
+    },
+    {
+      "id": "technology_and_internet-021",
+      "target": "Notification",
+      "taboo": [
+        "alert",
+        "phone",
+        "pop-up",
+        "message",
+        "sound"
+      ]
+    },
+    {
+      "id": "technology_and_internet-022",
+      "target": "Spreadsheet",
+      "taboo": [
+        "cells",
+        "rows",
+        "columns",
+        "formula",
+        "excel"
+      ]
+    },
+    {
+      "id": "technology_and_internet-023",
+      "target": "Cursor",
+      "taboo": [
+        "mouse",
+        "arrow",
+        "screen",
+        "click",
+        "pointer"
+      ]
+    },
+    {
+      "id": "technology_and_internet-024",
+      "target": "Battery Saver",
+      "taboo": [
+        "power",
+        "phone",
+        "energy",
+        "low",
+        "mode"
+      ]
+    },
+    {
+      "id": "technology_and_internet-025",
+      "target": "Webcam",
+      "taboo": [
+        "camera",
+        "laptop",
+        "video call",
+        "lens",
+        "stream"
+      ]
+    },
+    {
+      "id": "technology_and_internet-026",
+      "target": "Autocorrect",
+      "taboo": [
+        "typing",
+        "spelling",
+        "phone",
+        "fix",
+        "keyboard"
+      ]
+    },
+    {
+      "id": "technology_and_internet-027",
+      "target": "Encryption",
+      "taboo": [
+        "security",
+        "code",
+        "data",
+        "protect",
+        "secret"
+      ]
+    },
+    {
+      "id": "technology_and_internet-028",
+      "target": "App Store",
+      "taboo": [
+        "download",
+        "mobile",
+        "install",
+        "phone",
+        "marketplace"
+      ]
+    },
+    {
+      "id": "technology_and_internet-029",
+      "target": "Touchpad",
+      "taboo": [
+        "laptop",
+        "finger",
+        "mouse",
+        "cursor",
+        "click"
+      ]
+    },
+    {
+      "id": "technology_and_internet-030",
+      "target": "Captcha",
+      "taboo": [
+        "robot",
+        "verify",
+        "checkbox",
+        "website",
+        "letters"
+      ]
+    }
+  ]
+}
