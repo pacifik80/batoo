@@ -3,36 +3,16 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any
 
-TranscriptTone = Literal["pending", "rejected", "accepted", "judge", "guess", "success", "meta"]
-TranscriptAlignment = Literal["left", "center", "right"]
+from taboo_arena.app.transcript_view_models import (
+    BubbleDebugField,
+    BubbleDebugSection,
+    BubbleRawArtifact,
+    TranscriptMessage,
+)
 
-
-@dataclass(slots=True)
-class TranscriptDebugEntry:
-    """One expandable debug detail inside a transcript bubble."""
-
-    label: str
-    value: str
-
-
-@dataclass(slots=True)
-class TranscriptMessage:
-    """One visible message bubble in the transcript panel."""
-
-    role: str
-    label: str
-    text: str
-    tone: TranscriptTone
-    alignment: TranscriptAlignment
-    message_id: str = ""
-    status_text: str | None = None
-    debug_entries: list[TranscriptDebugEntry] = field(default_factory=list)
-    prompt_text: str | None = None
-    prompt_model_id: str | None = None
-    prompt_template_id: str | None = None
+TranscriptDebugEntry = BubbleDebugField
 
 
 def merge_transcript_event_sources(
@@ -72,13 +52,15 @@ def latest_round_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMessage]:
-    """Build transcript bubbles across session rounds in chronological order."""
+    """Project controller events into public dialogue bubbles plus hidden debug details."""
     messages: list[TranscriptMessage | None] = []
     clue_indexes: dict[tuple[int, int], int] = {}
     clue_judge_indexes: dict[tuple[int, int], int] = {}
     guess_indexes: dict[int, int] = {}
     guess_judge_indexes: dict[int, int] = {}
+    pending_clue_public_text: dict[tuple[int, int], str] = {}
     active_round_id: str | None = None
+    last_clue_key: tuple[int, int] | None = None
 
     for event in events:
         round_id = _event_round_id(event, active_round_id)
@@ -88,11 +70,13 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             clue_judge_indexes = {}
             guess_indexes = {}
             guess_judge_indexes = {}
+            pending_clue_public_text = {}
+            last_clue_key = None
             messages.append(
                 TranscriptMessage(
                     role="meta",
                     label="Round",
-                    text=_round_separator_text(event),
+                    public_text=_round_separator_text(event),
                     tone="meta",
                     alignment="center",
                     message_id=f"{round_id}:meta",
@@ -103,33 +87,39 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
         repair_no = int(event.get("clue_repair_no", 0) or 0)
         clue_key = (attempt_no, repair_no)
         event_type = str(event.get("event_type", ""))
+        if attempt_no > 0 and repair_no > 0 and event_type.startswith("clue_"):
+            last_clue_key = clue_key
 
         if event_type == "clue_draft_started":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.status_text = _cluer_status(event_type, repair_no)
+            clue_message.status_label = _cluer_status(event_type, repair_no)
             continue
 
         if event_type == "clue_candidate_cycle_started":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.status_text = _cluer_status(event_type, repair_no)
-            _merge_debug_entries(
+            clue_message.status_label = _cluer_status(event_type, repair_no)
+            _set_debug_section(
                 clue_message,
+                "Planning",
                 [
-                    _debug_entry("Allowed angles", _comma_join(event.get("allowed_angles"))),
-                    _debug_entry("Blocked terms", _comma_join(event.get("blocked_terms"))),
-                    _debug_entry("Blocked prior clues", _comma_join(event.get("blocked_prior_clues"))),
-                    _debug_entry("Blocked angles", _comma_join(event.get("blocked_angles"))),
+                    _debug_field("Allowed angles", _comma_join(event.get("allowed_angles"))),
+                    _debug_field("Blocked terms", _comma_join(event.get("blocked_terms"))),
+                    _debug_field("Blocked prior clues", _comma_join(event.get("blocked_prior_clues"))),
+                    _debug_field("Blocked angles", _comma_join(event.get("blocked_angles"))),
                 ],
+                summary="Controller planning inputs.",
             )
             continue
 
         if event_type == "clue_candidates_generated":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.status_text = _cluer_status(event_type, repair_no)
-            _merge_debug_entries(
+            clue_message.status_label = _cluer_status(event_type, repair_no)
+            generated_candidates = _string_list(event.get("clue_candidate_clues"))
+            _set_debug_section(
                 clue_message,
+                "Candidates",
                 [
-                    _debug_entry(
+                    _debug_field(
                         "Internal clue candidates",
                         _paired_lines(
                             event.get("clue_candidate_angles"),
@@ -137,60 +127,89 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                         ),
                     )
                 ],
+                summary=f"{len(generated_candidates)} candidate(s) generated.",
+            )
+            _set_raw_artifact(
+                clue_message,
+                "Cluer parse mode",
+                _optional_text(event.get("clue_candidate_parse_mode")),
             )
             continue
 
         if event_type == "clue_candidate_validation_completed":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.status_text = _cluer_status(event_type, repair_no)
-            _merge_debug_entries(
+            clue_message.status_label = _cluer_status(event_type, repair_no)
+            _set_debug_section(
                 clue_message,
+                "Validation",
                 [
-                    _debug_entry(
+                    _debug_field(
                         "Candidate validation",
                         _format_candidate_validation(event.get("candidate_results")),
-                    )
+                    ),
+                    _debug_field("Validator version", _optional_text(event.get("validator_version"))),
                 ],
+                summary="Hard rule filtering over the candidate batch.",
             )
             continue
 
         if event_type == "clue_candidate_selected":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.status_text = _cluer_status(event_type, repair_no)
-            _merge_debug_entries(
+            clue_message.status_label = _cluer_status(event_type, repair_no)
+            _set_debug_section(
                 clue_message,
+                "Summary",
                 [
-                    _debug_entry("Selected angle", _optional_text(event.get("selected_angle"))),
-                    _debug_entry("Internal clue candidates", _line_list(event.get("clue_candidate_clues"))),
+                    _debug_field("Selected angle", _optional_text(event.get("selected_angle"))),
+                ],
+                summary="One candidate selected for judge review.",
+            )
+            _set_debug_section(
+                clue_message,
+                "Candidates",
+                [
+                    _debug_field("Internal clue candidates", _line_list(event.get("clue_candidate_clues"))),
                 ],
             )
             continue
 
         if event_type == "clue_draft_generated":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.status_text = _cluer_status(event_type, repair_no)
-            clue_message.text = str(event.get("clue_text_raw", "")).strip() or "(empty clue)"
+            clue_message.status_label = _cluer_status(event_type, repair_no)
+            pending_text = _safe_cluer_public_text(_optional_text(event.get("clue_text_raw")))
+            pending_clue_public_text[clue_key] = pending_text
+            clue_message.pending_public_text = pending_text
             _set_prompt_metadata(clue_message, event)
-            _merge_debug_entries(
+            _set_debug_section(
                 clue_message,
+                "Summary",
                 [
-                    _debug_entry("Selected angle", _optional_text(event.get("selected_angle"))),
-                    _debug_entry("Internal clue candidates", _line_list(event.get("clue_candidate_clues"))),
+                    _debug_field("Selected angle", _optional_text(event.get("selected_angle"))),
+                    _debug_field("Selected clue candidate", pending_text),
+                ],
+            )
+            _set_debug_section(
+                clue_message,
+                "Candidates",
+                [
+                    _debug_field("Internal clue candidates", _line_list(event.get("clue_candidate_clues"))),
                 ],
             )
             continue
 
         if event_type == "clue_internal_retry_requested":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.status_text = _cluer_status(event_type, repair_no)
-            clue_message.tone = "rejected"
-            _merge_debug_entries(
+            clue_message.status_label = _cluer_status(event_type, repair_no)
+            _set_debug_section(
                 clue_message,
+                "Retries",
                 [
-                    _debug_entry("Hidden repair reasons", _comma_join(event.get("reason_codes"))),
-                    _debug_entry("Blocked terms", _comma_join(event.get("blocked_terms"))),
-                    _debug_entry("Blocked angles", _comma_join(event.get("blocked_angles"))),
+                    _debug_field("Reason codes", _comma_join(event.get("reason_codes"))),
+                    _debug_field("Blocked terms", _comma_join(event.get("blocked_terms"))),
+                    _debug_field("Blocked angles", _comma_join(event.get("blocked_angles"))),
+                    _debug_field("Allowed angles", _comma_join(event.get("allowed_angles"))),
                 ],
+                summary="Hidden repair requested before any public clue is shown.",
             )
             continue
 
@@ -202,14 +221,23 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 attempt_no,
                 repair_no,
             )
-            judge_message.status_text = "verifying final clue"
+            judge_message.status_label = "checking rules"
             continue
 
         if event_type == "llm_validation_completed":
             existing_clue_message = _lookup_message(messages, clue_indexes, clue_key)
             if existing_clue_message is not None:
                 verdict = str(event.get("final_judge_verdict", "")).strip()
-                existing_clue_message.tone = "rejected" if verdict == "fail" else "accepted"
+                if verdict == "fail":
+                    existing_clue_message.public_text = ""
+                    existing_clue_message.pending_public_text = None
+                    existing_clue_message.status_label = None
+                    existing_clue_message.tone = "pending"
+                else:
+                    existing_clue_message.public_text = pending_clue_public_text.get(clue_key, "")
+                    existing_clue_message.pending_public_text = None
+                    existing_clue_message.status_label = None
+                    existing_clue_message.tone = "accepted"
 
             judge_message = _ensure_clue_judge_message(
                 messages,
@@ -218,16 +246,29 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 attempt_no,
                 repair_no,
             )
-            verdict = str(event.get("final_judge_verdict", "")).strip()
-            judge_message.status_text = "accepted" if verdict != "fail" else "rejected"
-            judge_message.text = _format_clue_judge_text(event)
+            judge_message.status_label = None
+            judge_message.public_text = _clue_judge_public_text(event)
             _set_prompt_metadata(judge_message, event)
-            _merge_debug_entries(
+            _set_debug_section(
                 judge_message,
+                "Summary",
                 [
-                    _debug_entry("Judge warnings", _comma_join(event.get("llm_judge_warnings"))),
-                    _debug_entry("Judge reasons", _comma_join(event.get("llm_judge_reasons"))),
-                    _debug_entry(
+                    _debug_field("Final verdict", _optional_text(event.get("final_judge_verdict"))),
+                    _debug_field("LLM verdict", _optional_text(event.get("llm_judge_verdict"))),
+                    _debug_field(
+                        "Judge disagreement",
+                        "yes" if bool(event.get("judge_disagreement", False)) else "no",
+                    ),
+                ],
+                summary="Final clue arbitration result.",
+            )
+            _set_debug_section(
+                judge_message,
+                "Details",
+                [
+                    _debug_field("Judge warnings", _comma_join(event.get("llm_judge_warnings"))),
+                    _debug_field("Judge reasons", _comma_join(event.get("llm_judge_reasons"))),
+                    _debug_field(
                         "Matched surface forms",
                         _comma_join(event.get("llm_judge_suspicious_terms")),
                     ),
@@ -235,16 +276,39 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             )
             continue
 
+        if event_type == "clue_accepted":
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message.public_text = _safe_cluer_public_text(
+                _optional_text(event.get("clue_text_raw")) or pending_clue_public_text.get(clue_key)
+            )
+            clue_message.pending_public_text = None
+            clue_message.status_label = None
+            clue_message.tone = "accepted"
+            _set_debug_section(
+                clue_message,
+                "Summary",
+                [
+                    _debug_field("Selected angle", _optional_text(event.get("selected_angle"))),
+                    _debug_field("Judge warnings", _comma_join(event.get("judge_warning_flags"))),
+                ],
+                summary="Final accepted clue shown to the guesser.",
+            )
+            continue
+
         if event_type == "clue_repair_requested":
             clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.tone = "rejected"
-            clue_message.status_text = _cluer_status(event_type, repair_no)
-            _merge_debug_entries(
+            clue_message.tone = "pending"
+            clue_message.status_label = None
+            clue_message.public_text = ""
+            clue_message.pending_public_text = None
+            _set_debug_section(
                 clue_message,
+                "Retries",
                 [
-                    _debug_entry("Hidden repair reasons", _format_hidden_repair_debug(event)),
-                    _debug_entry("Selected angle", _optional_text(event.get("selected_angle"))),
+                    _debug_field("Hidden repair reasons", _format_hidden_repair_debug(event)),
+                    _debug_field("Selected angle", _optional_text(event.get("selected_angle"))),
                 ],
+                summary="Judge rejected the hidden clue candidate.",
             )
 
             judge_message = _ensure_clue_judge_message(
@@ -254,32 +318,60 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 attempt_no,
                 repair_no,
             )
-            judge_message.status_text = "rejected"
-            judge_message.text = _format_rejection_reason(event)
+            judge_message.status_label = None
+            judge_message.public_text = (
+                "Judge failed to return a valid decision."
+                if _contains_parse_failure(event.get("llm_judge_reasons"))
+                else "Rejected clue."
+            )
             _set_prompt_metadata(judge_message, event)
-            _merge_debug_entries(
+            _set_debug_section(
                 judge_message,
+                "Summary",
                 [
-                    _debug_entry("Logical violations", _comma_join(event.get("logical_violations"))),
-                    _debug_entry("Matched terms", _comma_join(event.get("logical_matched_terms"))),
-                    _debug_entry("Judge reasons", _comma_join(event.get("llm_judge_reasons"))),
+                    _debug_field("Final verdict", _optional_text(event.get("final_judge_verdict"))),
+                    _debug_field("LLM verdict", _optional_text(event.get("llm_judge_verdict"))),
+                    _debug_field(
+                        "Judge disagreement",
+                        "yes" if bool(event.get("judge_disagreement", False)) else "no",
+                    ),
+                ],
+                summary="Rejected clue remains hidden from the public dialogue.",
+            )
+            _set_debug_section(
+                judge_message,
+                "Details",
+                [
+                    _debug_field("Logical violations", _comma_join(event.get("logical_violations"))),
+                    _debug_field("Matched terms", _comma_join(event.get("logical_matched_terms"))),
+                    _debug_field("Judge reasons", _comma_join(event.get("llm_judge_reasons"))),
                 ],
             )
             continue
 
         if event_type == "guess_started":
             guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
-            guess_message.status_text = "forming hypotheses"
+            guess_message.status_label = "forming hypotheses"
             continue
 
         if event_type == "guess_shortlist_generated":
             guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
-            guess_message.status_text = "deduping"
-            _merge_debug_entries(
+            guess_message.status_label = "deduping"
+            shortlist = _string_list(event.get("guess_shortlist_candidates"))
+            _set_debug_section(
                 guess_message,
+                "Summary",
                 [
-                    _debug_entry("Guess shortlist", _line_list(event.get("guess_shortlist_candidates"))),
-                    _debug_entry(
+                    _debug_field("Shortlist size", str(len(shortlist))),
+                ],
+                summary="Shortlist built before visible guess selection.",
+            )
+            _set_debug_section(
+                guess_message,
+                "Shortlist",
+                [
+                    _debug_field("Guess shortlist", _line_list(event.get("guess_shortlist_candidates"))),
+                    _debug_field(
                         "Candidate notes",
                         _format_guess_candidate_notes(
                             event.get("guess_shortlist_candidate_keys"),
@@ -289,16 +381,24 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                     ),
                 ],
             )
+            _set_raw_artifact(
+                guess_message,
+                "Guesser parse mode",
+                _optional_text(event.get("guess_parse_mode")),
+            )
             continue
 
         if event_type == "guess_hidden_retry_requested":
             guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
-            guess_message.status_text = "forming hypotheses"
-            _merge_debug_entries(
+            guess_message.status_label = "forming hypotheses"
+            _set_debug_section(
                 guess_message,
+                "Retries",
                 [
-                    _debug_entry("Hidden retry reasons", _comma_join(event.get("reason_codes"))),
+                    _debug_field("Hidden retry reasons", _comma_join(event.get("reason_codes"))),
+                    _debug_field("Hidden retry count", _optional_text(event.get("guess_hidden_retry_no"))),
                 ],
+                summary="Controller asked the guesser for another hidden shortlist.",
             )
             continue
 
@@ -309,7 +409,7 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 round_id,
                 attempt_no,
             )
-            judge_message.status_text = "verifying guess"
+            judge_message.status_label = "verifying guess"
             continue
 
         if event_type == "guess_validation_completed":
@@ -319,22 +419,30 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 round_id,
                 attempt_no,
             )
-            final_correct = bool(event.get("final_guess_correct", False))
-            judge_message.status_text = "accepted" if final_correct else "rejected"
-            judge_message.text = "Correct guess confirmed." if final_correct else "Incorrect guess confirmed."
+            judge_message.status_label = None
+            judge_message.public_text = _guess_judge_public_text(event)
             _set_prompt_metadata(judge_message, event)
-            _merge_debug_entries(
+            _set_debug_section(
                 judge_message,
+                "Summary",
                 [
-                    _debug_entry("Judge reason codes", _comma_join(event.get("guess_judge_reason_codes"))),
-                    _debug_entry("Judge warnings", _comma_join(event.get("guess_judge_warnings"))),
-                    _debug_entry(
-                        "Matched surface forms",
-                        _comma_join(event.get("guess_judge_matched_surface_forms")),
-                    ),
-                    _debug_entry(
+                    _debug_field("Final guess correct", "yes" if bool(event.get("final_guess_correct", False)) else "no"),
+                    _debug_field(
                         "Judge disagreement",
                         "yes" if bool(event.get("judge_disagreement", False)) else "no",
+                    ),
+                ],
+                summary="Visible guess arbitration result.",
+            )
+            _set_debug_section(
+                judge_message,
+                "Details",
+                [
+                    _debug_field("Judge reason codes", _comma_join(event.get("guess_judge_reason_codes"))),
+                    _debug_field("Judge warnings", _comma_join(event.get("guess_judge_warnings"))),
+                    _debug_field(
+                        "Matched surface forms",
+                        _comma_join(event.get("guess_judge_matched_surface_forms")),
                     ),
                 ],
             )
@@ -343,15 +451,33 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
         if event_type == "guess_generated":
             guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
             final_correct = _guess_solved(event)
-            guess_message.text = str(event.get("guess_text_raw", "")).strip() or "(empty guess)"
+            guess_message.public_text = _guess_public_text(event)
             guess_message.tone = "success" if final_correct else "guess"
-            guess_message.status_text = "finalizing guess"
+            guess_message.status_label = None
             _set_prompt_metadata(guess_message, event)
-            _merge_debug_entries(
+            _set_debug_section(
                 guess_message,
+                "Summary",
                 [
-                    _debug_entry("Guess shortlist", _line_list(event.get("guess_shortlist_candidates"))),
-                    _debug_entry(
+                    _debug_field("Selected visible guess", _optional_text(event.get("guess_text_raw"))),
+                    _debug_field("Match status", _optional_text(event.get("guess_match_status"))),
+                    _debug_field("Match reason", _optional_text(event.get("guess_match_reason"))),
+                    _debug_field("Hidden retry count", _optional_text(event.get("guess_hidden_retry_count"))),
+                ],
+                summary="Final visible guess committed to the transcript.",
+            )
+            _set_debug_section(
+                guess_message,
+                "Shortlist",
+                [
+                    _debug_field("Guess shortlist", _line_list(event.get("guess_shortlist_candidates"))),
+                ],
+            )
+            _set_debug_section(
+                guess_message,
+                "Canonicalization",
+                [
+                    _debug_field(
                         "Canonicalization",
                         _format_canonicalization_debug(event),
                     ),
@@ -359,7 +485,31 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             )
             continue
 
-    return [message for message in messages if message is not None]
+        if event_type == "round_finished" and str(event.get("terminal_reason", "")).strip() == "clue_not_repaired":
+            if last_clue_key is None:
+                continue
+            final_clue_message = _lookup_message(messages, clue_indexes, last_clue_key)
+            if final_clue_message is None:
+                continue
+            if not final_clue_message.public_text:
+                final_clue_message.public_text = "Cluer failed to produce an acceptable clue."
+            final_clue_message.pending_public_text = None
+            final_clue_message.status_label = None
+            final_clue_message.tone = "rejected"
+
+    for message in messages:
+        if message is None or message.role != "cluer":
+            continue
+        if message.public_text or not message.pending_public_text:
+            continue
+        if any(section.title == "Retries" for section in message.debug_sections):
+            continue
+        message.public_text = message.pending_public_text
+        message.pending_public_text = None
+        message.status_label = None
+        message.tone = "accepted"
+
+    return [message for message in messages if message is not None and _should_render_message(message)]
 
 
 def _ensure_clue_message(
@@ -377,7 +527,7 @@ def _ensure_clue_message(
     clue_message = TranscriptMessage(
         role="cluer",
         label=_cluer_label(attempt_no, repair_no),
-        text="",
+        public_text="",
         tone="pending",
         alignment="left",
         message_id=f"{round_id}:clue:{attempt_no}:{repair_no}",
@@ -401,7 +551,7 @@ def _ensure_clue_judge_message(
     judge_message = TranscriptMessage(
         role="judge",
         label="Judge",
-        text="",
+        public_text="",
         tone="judge",
         alignment="center",
         message_id=f"{round_id}:judge-review:{attempt_no}:{repair_no}",
@@ -423,7 +573,7 @@ def _ensure_guess_message(
     guess_message = TranscriptMessage(
         role="guesser",
         label=f"Guesser - attempt {attempt_no}",
-        text="",
+        public_text="",
         tone="guess",
         alignment="right",
         message_id=f"{round_id}:guess:{attempt_no}",
@@ -445,7 +595,7 @@ def _ensure_guess_judge_message(
     judge_message = TranscriptMessage(
         role="judge",
         label="Judge",
-        text="",
+        public_text="",
         tone="judge",
         alignment="center",
         message_id=f"{round_id}:judge-guess:{attempt_no}",
@@ -471,25 +621,56 @@ def _set_prompt_metadata(message: TranscriptMessage, event: dict[str, Any]) -> N
     message.prompt_template_id = _prompt_template_id(event)
 
 
-def _merge_debug_entries(
+def _should_render_message(message: TranscriptMessage) -> bool:
+    return message.tone == "meta" or bool(message.public_text.strip()) or bool(message.status_label)
+
+
+def _set_debug_section(
     message: TranscriptMessage,
-    entries: list[TranscriptDebugEntry | None],
+    title: str,
+    fields: list[BubbleDebugField | None],
+    *,
+    summary: str | None = None,
 ) -> None:
-    merged = {entry.label: entry for entry in message.debug_entries}
-    for entry in entries:
-        if entry is None:
+    merged = {section.title: section for section in message.debug_sections}
+    current = merged.get(title, BubbleDebugSection(title=title))
+    if summary is not None:
+        current.summary = summary.strip() or None
+    merged_fields = {field.label: field for field in current.fields}
+    for field in fields:
+        if field is None:
             continue
-        merged[entry.label] = entry
-    message.debug_entries = list(merged.values())
+        merged_fields[field.label] = field
+    current.fields = list(merged_fields.values())
+    merged[title] = current
+    message.debug_sections = list(merged.values())
 
 
-def _debug_entry(label: str, value: str | None) -> TranscriptDebugEntry | None:
+def _set_raw_artifact(message: TranscriptMessage, label: str, value: str | None) -> None:
+    artifact = _raw_artifact(label, value)
+    if artifact is None:
+        return
+    merged = {item.label: item for item in message.raw_artifacts}
+    merged[artifact.label] = artifact
+    message.raw_artifacts = list(merged.values())
+
+
+def _debug_field(label: str, value: str | None) -> BubbleDebugField | None:
     if value is None:
         return None
     text = value.strip()
     if not text:
         return None
-    return TranscriptDebugEntry(label=label, value=text)
+    return BubbleDebugField(label=label, value=text)
+
+
+def _raw_artifact(label: str, value: str | None) -> BubbleRawArtifact | None:
+    if value is None:
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    return BubbleRawArtifact(label=label, value=text)
 
 
 def _cluer_label(attempt_no: int, repair_no: int) -> str:
@@ -500,7 +681,7 @@ def _cluer_label(attempt_no: int, repair_no: int) -> str:
 
 def _cluer_status(event_type: str, repair_no: int) -> str:
     if event_type in {"clue_draft_started", "clue_candidate_cycle_started"}:
-        return "repair" if repair_no > 1 else "planning"
+        return f"repair {repair_no}" if repair_no > 1 else "planning"
     if event_type == "clue_candidates_generated":
         return "drafting candidates"
     if event_type == "clue_candidate_validation_completed":
@@ -508,7 +689,7 @@ def _cluer_status(event_type: str, repair_no: int) -> str:
     if event_type in {"clue_candidate_selected", "clue_draft_generated"}:
         return "selected"
     if event_type in {"clue_internal_retry_requested", "clue_repair_requested"}:
-        return "repair"
+        return f"repair {repair_no + 1}"
     return "planning"
 
 
@@ -546,34 +727,35 @@ def _round_separator_text(event: dict[str, Any]) -> str:
     return f"Round • {round_id}" if round_id else "Round"
 
 
-def _format_rejection_reason(event: dict[str, Any]) -> str:
-    logical_violations = _string_list(event.get("logical_violations"))
-    matched_terms = _string_list(event.get("logical_matched_terms"))
-    llm_verdict = str(event.get("llm_judge_verdict", "")).strip()
-    llm_reasons = _string_list(event.get("llm_judge_reasons"))
-    judge_disagreement = bool(event.get("judge_disagreement", False))
-    parts: list[str] = ["Rejected clue."]
-    if logical_violations:
-        parts.append(f"Rules: {', '.join(logical_violations)}.")
-    if matched_terms:
-        parts.append(f"Matched terms: {', '.join(matched_terms)}.")
-    if judge_disagreement and llm_verdict:
-        parts.append(
-            f"Layer disagreement: deterministic validator rejected it while the LLM judge returned {llm_verdict}."
-        )
-    if llm_reasons:
-        parts.append(f"Judge: {'; '.join(llm_reasons)}.")
-    return " ".join(parts)
-
-
-def _format_clue_judge_text(event: dict[str, Any]) -> str:
+def _clue_judge_public_text(event: dict[str, Any]) -> str:
+    if _contains_parse_failure(event.get("llm_judge_reasons")):
+        return "Judge failed to return a valid decision."
     verdict = str(event.get("final_judge_verdict", "")).strip()
     if verdict == "fail":
         return "Rejected clue."
-    warnings = _string_list(event.get("llm_judge_warnings")) or _string_list(event.get("llm_judge_reasons"))
+    warnings = _string_list(event.get("llm_judge_warnings"))
     if verdict == "pass_with_warning" or warnings:
-        return _join_reason_parts(["Approved with warning."], warnings)
+        return "Approved with warning."
     return "Approved."
+
+
+def _guess_judge_public_text(event: dict[str, Any]) -> str:
+    if _contains_parse_failure(event.get("guess_judge_reason_codes")):
+        return "Judge failed to return a valid decision."
+    if bool(event.get("final_guess_correct", False)):
+        return "Correct guess confirmed."
+    return "Incorrect guess confirmed."
+
+
+def _safe_cluer_public_text(value: str | None) -> str:
+    return value or "Cluer failed to produce an acceptable clue."
+
+
+def _guess_public_text(event: dict[str, Any]) -> str:
+    guess_text = _optional_text(event.get("guess_text_raw"))
+    if not guess_text or guess_text == "(no valid guess)":
+        return "Guesser failed to produce a usable guess."
+    return guess_text
 
 
 def _format_hidden_repair_debug(event: dict[str, Any]) -> str | None:
@@ -681,11 +863,8 @@ def _comma_join(value: Any) -> str | None:
     return ", ".join(items) or None
 
 
-def _join_reason_parts(prefix_parts: list[str], reasons: list[str]) -> str:
-    parts = list(prefix_parts)
-    if reasons:
-        parts.append(f"Judge: {'; '.join(reasons)}.")
-    return " ".join(parts)
+def _contains_parse_failure(value: Any) -> bool:
+    return any("judge_output_parse_error" in item for item in _string_list(value))
 
 
 def _string_list(value: Any) -> list[str]:

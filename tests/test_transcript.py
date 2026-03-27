@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from taboo_arena.app.transcript import (
+    BubbleDebugSection,
     TranscriptDebugEntry,
     TranscriptMessage,
     build_transcript_messages,
@@ -65,16 +66,15 @@ def test_build_transcript_messages_renders_clue_judge_and_guess_flow() -> None:
         ]
     )
 
-    assert [message.role for message in messages] == ["meta", "cluer", "judge", "cluer", "judge", "guesser"]
-    assert [message.tone for message in messages] == ["meta", "rejected", "judge", "accepted", "judge", "success"]
+    assert [message.role for message in messages] == ["meta", "judge", "cluer", "judge", "guesser"]
+    assert [message.tone for message in messages] == ["meta", "judge", "accepted", "judge", "success"]
     assert messages[0].text == "Round • round_1"
-    assert "Rejected clue." in messages[2].text
-    assert "Matched terms: Star Wars." in messages[2].text
-    assert "deterministic validator rejected it while the LLM judge returned pass" in messages[2].text
-    assert messages[2].status_text == "rejected"
-    assert messages[4].text == "Approved."
-    assert messages[5].alignment == "right"
-    assert messages[5].status_text == "finalizing guess"
+    assert messages[1].text == "Rejected clue."
+    assert any(entry.label == "Matched terms" for entry in messages[1].debug_entries)
+    assert messages[2].text == "winter sleeper"
+    assert messages[3].text == "Approved."
+    assert messages[4].alignment == "right"
+    assert messages[4].status_text is None
 
 
 def test_build_transcript_messages_keeps_round_history_with_round_separators() -> None:
@@ -172,11 +172,10 @@ def test_build_transcript_messages_handles_live_events_without_round_id() -> Non
         ]
     )
 
-    assert [message.role for message in messages] == ["meta", "cluer", "judge", "guesser"]
+    assert [message.role for message in messages] == ["meta", "judge", "guesser"]
     assert messages[0].text == "Round • food:soup:0112"
-    assert messages[1].text == "comforting meal"
-    assert "Rejected clue." in messages[2].text
-    assert messages[3].text == "stew"
+    assert messages[1].text == "Rejected clue."
+    assert messages[2].text == "stew"
 
 
 def test_build_transcript_messages_tracks_live_status_progression_and_debug_details() -> None:
@@ -270,11 +269,13 @@ def test_build_transcript_messages_tracks_live_status_progression_and_debug_deta
     cluer_message = messages[1]
     guesser_message = messages[2]
 
-    assert cluer_message.status_text == "selected"
+    assert cluer_message.text == "winter sleeper"
+    assert cluer_message.status_text is None
     assert any(entry.label == "Allowed angles" for entry in cluer_message.debug_entries)
     assert any(entry.label == "Internal clue candidates" for entry in cluer_message.debug_entries)
     assert any(entry.label == "Candidate validation" for entry in cluer_message.debug_entries)
-    assert guesser_message.status_text == "finalizing guess"
+    assert guesser_message.text == "bear"
+    assert guesser_message.status_text is None
     assert any(entry.label == "Guess shortlist" for entry in guesser_message.debug_entries)
     assert any(entry.label == "Canonicalization" for entry in guesser_message.debug_entries)
 
@@ -428,13 +429,18 @@ def test_transcript_message_html_renders_status_and_debug_details() -> None:
         TranscriptMessage(
             role="cluer",
             label="Cluer - attempt 1",
-            text="winter sleeper",
+            public_text="winter sleeper",
             tone="accepted",
             alignment="left",
-            status_text="selected",
-            debug_entries=[
-                TranscriptDebugEntry(label="Selected angle", value="use"),
-                TranscriptDebugEntry(label="Internal clue candidates", value="type: forest mammal"),
+            status_label="selected",
+            debug_sections=[
+                BubbleDebugSection(
+                    title="Summary",
+                    fields=[
+                        TranscriptDebugEntry(label="Selected angle", value="use"),
+                        TranscriptDebugEntry(label="Internal clue candidates", value="type: forest mammal"),
+                    ],
+                )
             ],
         )
     )

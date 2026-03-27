@@ -573,6 +573,27 @@ def apply_theme() -> None:
           gap: 0.38rem;
           margin-top: 0.44rem;
         }
+        .transcript-debug-section,
+        .transcript-debug-raw {
+          display: grid;
+          gap: 0.36rem;
+          margin-top: 0.48rem;
+        }
+        .transcript-debug-section:first-of-type {
+          margin-top: 0.44rem;
+        }
+        .transcript-debug-section-title {
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          opacity: 0.62;
+        }
+        .transcript-debug-summary {
+          font-size: 0.78rem;
+          line-height: 1.4;
+          opacity: 0.82;
+        }
         .transcript-debug-item {
           display: grid;
           gap: 0.1rem;

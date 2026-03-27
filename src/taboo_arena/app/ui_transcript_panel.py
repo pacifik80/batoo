@@ -168,13 +168,13 @@ def transcript_message_html(message: TranscriptMessage) -> str:
         else ""
     )
     status_html = (
-        f"<div class='transcript-status'>{html.escape(message.status_text)}</div>"
-        if message.status_text
+        f"<div class='transcript-status'>{html.escape(message.status_label)}</div>"
+        if message.status_label
         else ""
     )
     text_html = (
-        f"<div class='transcript-text'>{html.escape(message.text)}</div>"
-        if message.text
+        f"<div class='transcript-text'>{html.escape(message.public_text)}</div>"
+        if message.public_text
         else ""
     )
     debug_html = _transcript_debug_html(message)
@@ -188,20 +188,55 @@ def transcript_message_html(message: TranscriptMessage) -> str:
 
 
 def _transcript_debug_html(message: TranscriptMessage) -> str:
-    if not message.debug_entries:
+    if not message.debug_sections and not message.raw_artifacts:
         return ""
-    rows = "".join(
+    section_html = "".join(
         (
-            "<div class='transcript-debug-item'>"
-            f"<div class='transcript-debug-label'>{html.escape(entry.label)}</div>"
-            f"<div class='transcript-debug-value'>{html.escape(entry.value).replace(chr(10), '<br/>')}</div>"
-            "</div>"
+            "<div class='transcript-debug-section'>"
+            f"<div class='transcript-debug-section-title'>{html.escape(section.title)}</div>"
+            + (
+                f"<div class='transcript-debug-summary'>{html.escape(section.summary)}</div>"
+                if section.summary
+                else ""
+            )
+            + (
+                "<div class='transcript-debug-grid'>"
+                + "".join(
+                    (
+                        "<div class='transcript-debug-item'>"
+                        f"<div class='transcript-debug-label'>{html.escape(field.label)}</div>"
+                        f"<div class='transcript-debug-value'>{html.escape(field.value).replace(chr(10), '<br/>')}</div>"
+                        "</div>"
+                    )
+                    for field in section.fields
+                )
+                + "</div>"
+                if section.fields
+                else ""
+            )
+            + "</div>"
         )
-        for entry in message.debug_entries
+        for section in message.debug_sections
+    )
+    raw_html = (
+        "<div class='transcript-debug-raw'>"
+        "<div class='transcript-debug-section-title'>Raw Artifacts</div>"
+        + "".join(
+            (
+                "<div class='transcript-debug-item'>"
+                f"<div class='transcript-debug-label'>{html.escape(artifact.label)}</div>"
+                f"<div class='transcript-debug-value'>{html.escape(artifact.value).replace(chr(10), '<br/>')}</div>"
+                "</div>"
+            )
+            for artifact in message.raw_artifacts
+        )
+        + "</div>"
+        if message.raw_artifacts
+        else ""
     )
     return (
         "<details class='transcript-debug'>"
         "<summary>Debug</summary>"
-        f"<div class='transcript-debug-grid'>{rows}</div>"
+        f"{section_html}{raw_html}"
         "</details>"
     )
