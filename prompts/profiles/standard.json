@@ -1,0 +1,42 @@
+{
+  "id": "standard",
+  "description": "Fuller but still shared packaging for stronger models.",
+  "section_style": "sectioned_control",
+  "include_section_titles": true,
+  "section_labels": {
+    "objective": "Objective",
+    "rules": "Rules",
+    "state": "Current state"
+  },
+  "control_key_aliases": {
+    "attempt_index": "attempt",
+    "retry_index": "retry",
+    "forbidden_words": "forbidden_words",
+    "previous_accepted_clues": "previous_accepted_clues",
+    "previous_rejected_clues": "previous_rejected_clues",
+    "previous_wrong_guesses": "previous_wrong_guesses",
+    "prior_accepted_clues": "prior_accepted_clues",
+    "prior_wrong_guesses": "prior_wrong_guesses",
+    "target_type_hint": "target_type_hint",
+    "selected_clue": "selected_clue",
+    "visible_guess": "visible_guess",
+    "candidate_answer_spans": "candidate_answer_spans",
+    "deterministic_warnings": "deterministic_warnings",
+    "allowed_block_reason_codes": "allowed_block_reason_codes",
+    "allowed_warning_codes": "allowed_warning_codes",
+    "allowed_reason_codes": "allowed_reason_codes",
+    "revision_notes": "revision_notes"
+  },
+  "list_limits": {
+    "previous_accepted_clues": 6,
+    "previous_rejected_clues": 6,
+    "previous_wrong_guesses": 6,
+    "prior_accepted_clues": 6,
+    "prior_wrong_guesses": 6,
+    "candidate_answer_spans": 6,
+    "deterministic_warnings": 6
+  },
+  "output_header": "Output contract",
+  "control_header": "Current state",
+  "control_footer": ""
+}

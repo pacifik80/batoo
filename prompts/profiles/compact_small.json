@@ -1,0 +1,41 @@
+{
+  "id": "compact_small",
+  "description": "Short, machine-like packaging for small local models.",
+  "section_style": "compact_control",
+  "include_section_titles": true,
+  "section_labels": {
+    "objective": "TASK",
+    "rules": "RULES"
+  },
+  "control_key_aliases": {
+    "attempt_index": "attempt",
+    "retry_index": "retry_index",
+    "forbidden_words": "taboo_words",
+    "previous_accepted_clues": "accepted_clues",
+    "previous_rejected_clues": "rejected_clues",
+    "previous_wrong_guesses": "wrong_guesses",
+    "prior_accepted_clues": "accepted_clue_history",
+    "prior_wrong_guesses": "wrong_guess_history",
+    "target_type_hint": "type_hint",
+    "selected_clue": "clue",
+    "visible_guess": "guess",
+    "candidate_answer_spans": "candidate_spans",
+    "deterministic_warnings": "matcher_warnings",
+    "allowed_block_reason_codes": "allowed_block_reason_codes",
+    "allowed_warning_codes": "allowed_warning_codes",
+    "allowed_reason_codes": "allowed_reason_codes",
+    "revision_notes": "revision_notes"
+  },
+  "list_limits": {
+    "previous_accepted_clues": 2,
+    "previous_rejected_clues": 2,
+    "previous_wrong_guesses": 2,
+    "prior_accepted_clues": 2,
+    "prior_wrong_guesses": 2,
+    "candidate_answer_spans": 3,
+    "deterministic_warnings": 3
+  },
+  "output_header": "OUTPUT_CONTRACT",
+  "control_header": "CONTROL_STATE",
+  "control_footer": "END_CONTROL_STATE"
+}

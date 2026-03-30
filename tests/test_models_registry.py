@@ -39,6 +39,8 @@ def test_registry_persists_custom_entries(tmp_path: Path) -> None:
         repo_id="me/custom",
         architecture_family="custom",
         chat_template_id="generic_completion",
+        prompt_profile_id="compact_small",
+        prompt_override_id="custom-override",
         supports_system_prompt=True,
         roles_supported=["cluer", "guesser", "judge"],
         languages=["en"],
@@ -46,5 +48,7 @@ def test_registry_persists_custom_entries(tmp_path: Path) -> None:
     )
     registry.add_custom_entry(entry)
     reloaded = ModelRegistry(custom_store_path=custom_store)
-    assert reloaded.get("custom-model").source == "custom"
-
+    persisted = reloaded.get("custom-model")
+    assert persisted.source == "custom"
+    assert persisted.prompt_profile_id == "compact_small"
+    assert persisted.prompt_override_id == "custom-override"

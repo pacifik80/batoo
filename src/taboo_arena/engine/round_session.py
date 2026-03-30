@@ -326,6 +326,7 @@ class RoundStepper:
                     if state.last_repair_feedback is None
                     else json.dumps(state.last_repair_feedback.model_dump(mode="json"))
                 ),
+                model_entry=state.cluer_entry,
             ),
             generation_params=state.settings.generation.cluer,
             runtime_policy=state.runtime_policy,
@@ -755,6 +756,7 @@ class RoundStepper:
                     accepted_clues=state.accepted_clues,
                     wrong_guesses=state.wrong_guesses,
                     attempt_no=state.attempt_no,
+                    model_entry=state.guesser_entry,
                 ),
                 generation_params=state.settings.generation.guesser,
                 runtime_policy=state.runtime_policy,

@@ -1,0 +1,29 @@
+{
+  "id": "judge_guess_base",
+  "role_id": "judge_guess",
+  "message_role": "user",
+  "intro": "You are the Judge in a Taboo benchmark.",
+  "objective_lines": [
+    "Goal: decide whether the final visible guess counts as the target answer."
+  ],
+  "required_line_keys": [
+    "guess_judge_accept_target_inside_visible_guess"
+  ],
+  "forbidden_line_keys": [
+    "guess_judge_no_broad_similarity_upgrade"
+  ],
+  "advisory_line_keys": [
+    "guess_judge_tolerate_wrapper_noise"
+  ],
+  "control_field_order": [
+    "attempt_index",
+    "target",
+    "visible_guess",
+    "deterministic_match_status",
+    "deterministic_match_reason",
+    "candidate_answer_spans",
+    "deterministic_warnings",
+    "allowed_reason_codes"
+  ],
+  "output_contract_id": "judge_guess"
+}

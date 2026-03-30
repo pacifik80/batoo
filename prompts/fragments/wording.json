@@ -1,0 +1,14 @@
+{
+  "cluer_return_one_per_angle": "Return exactly one short clue candidate for each allowed angle.",
+  "cluer_use_only_allowed_angles": "Use only the provided angle labels.",
+  "cluer_hide_target_and_blocked_terms": "Do not mention the target, taboo words, blocked terms, or blocked prior clues.",
+  "guesser_prefer_concrete_target": "Prefer a concrete target over a broad concept when the clues point to a specific person, place, animal, object, event, or profession.",
+  "guesser_no_repeat_guess": "Do not repeat a previous wrong guess or a trivial wrapper variant of it.",
+  "judge_block_only_actual_rule_breaks": "Block only for actual game-rule violations or obvious trivial rewrites missed by deterministic filtering.",
+  "judge_no_broad_semantic_critic": "Do not act as a broad semantic critic.",
+  "judge_no_near_paraphrase_block": "Do not block on near-explicit paraphrase.",
+  "judge_allow_clear_nonbreaks": "If the clue is strong and not a clear lexical rule break, allow it and optionally warn.",
+  "guess_judge_accept_target_inside_visible_guess": "If the target answer appears anywhere in the visible guess as an answer candidate, mark correct true even when wrapper text is messy.",
+  "guess_judge_no_broad_similarity_upgrade": "Do not upgrade broad semantic similarity to a correct answer when the target is absent.",
+  "guess_judge_tolerate_wrapper_noise": "Do not require perfectly clean formatting when the target already appears inside the visible guess."
+}

@@ -551,6 +551,12 @@ def apply_theme() -> None:
           white-space: pre-wrap;
           word-break: break-word;
         }
+        .transcript-text-struck {
+          text-decoration: line-through;
+          text-decoration-thickness: 1.5px;
+          text-decoration-color: currentColor;
+          opacity: 0.8;
+        }
         .transcript-debug {
           margin-top: 0.56rem;
           padding-top: 0.5rem;

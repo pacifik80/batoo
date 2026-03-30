@@ -136,7 +136,9 @@ Each entry defines:
 - optional GGUF filename
 - tokenizer repo
 - architecture family
-- prompt template id
+- prompt profile id
+- optional prompt override id
+- chat template id
 - system prompt support
 - supported roles
 - estimated VRAM
@@ -152,13 +154,35 @@ Supported prompt adapters:
 - `phi_chat`
 - `generic_completion`
 
-Role prompts are stored in the repository-level [`prompts`](./prompts) folder:
+## Prompt Architecture
 
-- [`cluer.json`](./prompts/cluer.json)
-- [`guesser.json`](./prompts/guesser.json)
-- [`judge.json`](./prompts/judge.json)
+Prompt semantics and chat transport are intentionally separate.
 
-The app loads those JSON files at runtime, so role prompt maintenance now happens there rather than in Python code.
+The runtime prompt builder composes prompts in this order:
+
+1. shared role task spec
+2. shared prompt profile
+3. current role state and output contract
+4. model-family chat formatting
+
+The layered prompt files live under the repository-level [`prompts`](./prompts) folder:
+
+- [`prompts/roles`](./prompts/roles) for canonical role task specs
+- [`prompts/profiles`](./prompts/profiles) for shared packaging profiles such as `compact_small`, `standard`, and `strict_judge`
+- [`prompts/fragments`](./prompts/fragments) for centralized enums, output contracts, and shared wording
+- [`prompts/overrides`](./prompts/overrides) for optional rare per-model escape hatches
+
+This means rule changes are made once in the shared role specs or fragments instead of cloning a full prompt set per model.
+
+`prompt_profile_id` controls how much context and prose the model sees:
+
+- `compact_small` keeps prompts shorter and more machine-like for smaller 1.5B to 4B local models
+- `standard` keeps the same semantics with fuller packaging for stronger 7B+ models
+- `strict_judge` is a compact enum-driven judge profile
+
+`chat_template_id` stays separate and only controls transport formatting for model families such as Qwen, Mistral, Phi, Gemma, and Llama. When a tokenizer provides its own chat template, the app prefers that tokenizer-native rendering.
+
+`prompt_override_id` is optional and should stay rare. The default path is shared role specs plus shared profiles.
 
 For GGUF models, a specific filename is required. For example, a `Q4_K_M` file can be referenced directly in the registry or in a custom entry.
 

@@ -1,15 +1,32 @@
 from __future__ import annotations
 
 from taboo_arena.cards.schemas import CardRecord
-from taboo_arena.judge.llm import LLMJudgeResult
+from taboo_arena.judge.llm import LLMJudgeResult, _normalize_clue_judge_codes
 from taboo_arena.judge.logical import LogicalValidator
 from taboo_arena.judge.merge import merge_judge_results
+from taboo_arena.models.registry import ModelEntry
+from taboo_arena.prompts.store import load_prompt_fragment
 from taboo_arena.prompts.tasks import (
     build_clue_judge_messages,
     build_cluer_messages,
     build_guess_judge_messages,
     build_guesser_messages,
 )
+
+
+def _entry(profile_id: str) -> ModelEntry:
+    return ModelEntry(
+        id=f"test-{profile_id}",
+        display_name=f"test-{profile_id}",
+        backend="transformers_safetensors",
+        repo_id="test/test",
+        architecture_family="test",
+        chat_template_id="generic_completion",
+        prompt_profile_id=profile_id,
+        supports_system_prompt=True,
+        roles_supported=["cluer", "guesser", "judge"],
+        languages=["en"],
+    )
 
 
 def test_logical_validator_catches_target_and_repeat(sample_card) -> None:
@@ -102,15 +119,18 @@ def test_cluer_prompt_includes_rejection_feedback_and_rejected_clues(sample_card
         blocked_prior_clues=["forest giant"],
         blocked_angles=["effect"],
         repair_feedback_json='{"reason_codes":["repeated_rejected_clue"]}',
+        model_entry=_entry("standard"),
     )
 
     assert len(messages) == 1
     content = messages[0].content
-    assert "Allowed angles" in content
-    assert '"type", "context", "use"' in content
+    assert "Current state" in content
+    assert '- allowed_angles: ["type", "context", "use"]' in content
     assert "forest giant" in content
-    assert "Structured repair feedback" in content
+    assert "revision_notes" in content
     assert "repeated_rejected_clue" in content
+    assert "Internal repair cycle" not in content
+    assert "Structured repair feedback" not in content
 
 
 def test_cluer_prompt_pushes_for_concrete_type_anchored_clues(sample_card) -> None:
@@ -125,13 +145,18 @@ def test_cluer_prompt_pushes_for_concrete_type_anchored_clues(sample_card) -> No
         blocked_terms=["bear", "grizzly"],
         blocked_prior_clues=[],
         blocked_angles=[],
+        model_entry=_entry("compact_small"),
     )
 
     assert len(messages) == 1
     content = messages[0].content
+    assert "TASK" in content
+    assert "CONTROL_STATE" in content
     assert "Return exactly one short clue candidate for each allowed angle" in content
     assert "Use only the provided angle labels" in content
-    assert "return strict JSON only" in content
+    assert 'allowed_angles=["type", "use", "context"]' in content
+    assert "Return strict JSON only." in content
+    assert "Pivot away from blocked terms and blocked angles" not in content
 
 
 def test_guesser_prompt_prefers_concrete_target_over_broad_concept(sample_card) -> None:
@@ -141,14 +166,16 @@ def test_guesser_prompt_prefers_concrete_target_over_broad_concept(sample_card) 
         accepted_clues=["large forest mammal known for hibernation"],
         wrong_guesses=["animal"],
         attempt_no=2,
+        model_entry=_entry("compact_small"),
     )
 
     assert len(messages) == 1
     content = messages[0].content
     assert "Prefer a concrete target over a broad concept" in content
     assert "Do not repeat a previous wrong guess" in content
-    assert "Current accepted clue: large forest mammal known for hibernation." in content
-    assert "return strict JSON only" in content
+    assert "current_clue=large forest mammal known for hibernation" in content
+    assert "type_hint=Animals" in content
+    assert "Return strict JSON only." in content
 
 
 def test_clue_judge_prompt_discourages_overstrict_descriptive_failures(sample_card) -> None:
@@ -158,15 +185,17 @@ def test_clue_judge_prompt_discourages_overstrict_descriptive_failures(sample_ca
         accepted_clues=[],
         rejected_clues=[],
         attempt_no=1,
+        model_entry=_entry("strict_judge"),
     )
 
     assert len(messages) == 1
     content = messages[0].content
-    assert "block only for actual game-rule violations" in content
+    assert "Block only for actual game-rule violations" in content
     assert "Do not act as a broad semantic critic" in content
     assert "Do not block on near-explicit paraphrase" in content
     assert '"allow":true' in content
-    assert "Output contract: return strict JSON only" in content
+    assert "Return strict JSON only." in content
+    assert "|".join(load_prompt_fragment("judge_reason_codes")["clue_block"]) in content
 
 
 def test_guess_judge_prompt_accepts_target_inside_visible_guess(sample_card) -> None:
@@ -178,11 +207,20 @@ def test_guess_judge_prompt_accepts_target_inside_visible_guess(sample_card) -> 
         match_reason="multi_candidate_contains_target",
         candidate_spans=["bear", "wolf"],
         warnings=["multi_candidate_guess"],
+        model_entry=_entry("strict_judge"),
     )
 
     assert len(messages) == 1
     content = messages[0].content
-    assert "if the target answer appears anywhere in the visible guess" in content
+    assert "If the target answer appears anywhere in the visible guess" in content
     assert "Do not require perfectly clean formatting" in content
     assert '"correct":false' in content
-    assert "Output contract: return strict JSON only" in content
+    assert "Return strict JSON only." in content
+    assert "|".join(load_prompt_fragment("judge_reason_codes")["guess"]) in content
+
+
+def test_unknown_clue_judge_reason_codes_are_demoted_to_warning() -> None:
+    normalized_blocks, normalized_warnings = _normalize_clue_judge_codes(["invented_code"], [])
+
+    assert normalized_blocks == []
+    assert normalized_warnings == ["unknown_reason_code"]

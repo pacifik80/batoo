@@ -25,6 +25,8 @@ class ModelEntry(BaseModel):
     tokenizer_repo: str | None = None
     architecture_family: str
     chat_template_id: str
+    prompt_profile_id: str = "standard"
+    prompt_override_id: str | None = None
     supports_system_prompt: bool
     stop_tokens: list[str] = Field(default_factory=list)
     roles_supported: list[RoleName]
@@ -122,4 +124,3 @@ class ModelRegistry:
         serializable = [entry.model_dump(mode="json") for entry in self._custom_entries]
         self.custom_store_path.parent.mkdir(parents=True, exist_ok=True)
         self.custom_store_path.write_text(json.dumps(serializable, indent=2), encoding="utf-8")
-

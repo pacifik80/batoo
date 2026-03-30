@@ -46,6 +46,7 @@ class TranscriptMessage:
     public_text: str = ""
     pending_public_text: str | None = None
     status_label: str | None = None
+    is_struck_out: bool = False
     is_public_turn: bool = True
     debug_timeline: list[str] = field(default_factory=list)
     debug_sections: list[BubbleDebugSection] = field(default_factory=list)

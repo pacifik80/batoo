@@ -1,0 +1,15 @@
+{
+  "strict_json_only": "Return strict JSON only. No markdown, no code fences, no extra prose.",
+  "cluer_candidates": {
+    "schema_kind": "cluer_candidates"
+  },
+  "guesser_candidates": {
+    "schema_kind": "guesser_candidates"
+  },
+  "judge_clue": {
+    "schema_kind": "judge_clue"
+  },
+  "judge_guess": {
+    "schema_kind": "judge_guess"
+  }
+}

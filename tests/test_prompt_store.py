@@ -1,52 +1,42 @@
 from __future__ import annotations
 
 from taboo_arena.prompts.store import (
-    get_prompt_path,
-    load_prompt_definition,
-    render_prompt_messages,
+    get_fragment_path,
+    get_profile_path,
+    get_prompt_override_path,
+    get_role_spec_path,
+    load_prompt_fragment,
+    load_prompt_profile,
+    load_role_task_spec,
+    render_prompt_override_messages,
 )
 
 
-def test_prompt_files_exist_and_validate() -> None:
-    for prompt_id in [
-        "cluer",
-        "cluer_candidates",
-        "cluer_repair",
-        "guesser",
-        "guesser_candidates",
-        "judge",
-        "judge_clue",
-        "judge_guess",
-    ]:
-        path = get_prompt_path(prompt_id)
-        definition = load_prompt_definition(prompt_id)
+def test_layered_prompt_files_exist_and_validate() -> None:
+    for spec_id in ["cluer_base", "guesser_base", "judge_clue_base", "judge_guess_base"]:
+        path = get_role_spec_path(spec_id)
+        spec = load_role_task_spec(spec_id)
 
         assert path.exists()
-        assert definition.id == prompt_id
-        assert len(definition.messages) >= 1
+        assert spec.id == spec_id
+
+    for profile_id in ["compact_small", "standard", "strict_judge"]:
+        path = get_profile_path(profile_id)
+        profile = load_prompt_profile(profile_id)
+
+        assert path.exists()
+        assert profile.id == profile_id
+
+    for fragment_id in ["angle_enum", "judge_reason_codes", "output_contracts", "wording"]:
+        path = get_fragment_path(fragment_id)
+        payload = load_prompt_fragment(fragment_id)
+
+        assert path.exists()
+        assert payload
 
 
-def test_render_prompt_messages_uses_json_files() -> None:
-    messages = render_prompt_messages(
-        "cluer_candidates",
-        {
-            "target": "Bear",
-            "forbidden_words_json": "[\"grizzly\", \"honey\", \"pooh\"]",
-            "allowed_angles_json": "[\"type\", \"use\", \"context\"]",
-            "blocked_terms_json": "[\"bear\"]",
-            "blocked_prior_clues_json": "[\"forest mammal\"]",
-            "blocked_angles_json": "[\"effect\"]",
-            "previous_accepted_clues_json": "[\"forest mammal\"]",
-            "previous_rejected_clues_json": "[\"cave dweller\"]",
-            "previous_wrong_guesses_json": "[\"wolf\"]",
-            "attempt_no": 2,
-            "repair_no": 1,
-            "repair_feedback_json": "{}",
-            "output_schema_json": "{\"candidates\":[{\"angle\":\"type\",\"clue\":\"string\"}]}",
-        },
-    )
+def test_prompt_override_path_and_missing_override_render_are_safe() -> None:
+    path = get_prompt_override_path("does-not-exist", "cluer")
 
-    assert len(messages) == 1
-    assert messages[0].content.startswith("You are the Cluer")
-    assert "Target: Bear." in messages[0].content
-    assert "Allowed angles" in messages[0].content
+    assert path.name == "cluer.json"
+    assert render_prompt_override_messages("does-not-exist", "cluer", {"target": "Bear"}) is None

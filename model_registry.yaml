@@ -5,6 +5,7 @@ models:
     repo_id: Qwen/Qwen2.5-1.5B-Instruct
     architecture_family: qwen2.5
     chat_template_id: qwen_chatml
+    prompt_profile_id: compact_small
     supports_system_prompt: true
     stop_tokens: ["<|im_end|>"]
     roles_supported: ["cluer", "guesser", "judge"]
@@ -24,6 +25,7 @@ models:
     repo_id: Qwen/Qwen2.5-3B-Instruct
     architecture_family: qwen2.5
     chat_template_id: qwen_chatml
+    prompt_profile_id: compact_small
     supports_system_prompt: true
     stop_tokens: ["<|im_end|>"]
     roles_supported: ["cluer", "guesser", "judge"]
@@ -43,6 +45,7 @@ models:
     repo_id: microsoft/Phi-4-mini-instruct
     architecture_family: phi4
     chat_template_id: phi_chat
+    prompt_profile_id: compact_small
     supports_system_prompt: true
     stop_tokens: ["<|assistant|>", "<|endoftext|>"]
     roles_supported: ["cluer", "guesser", "judge"]
@@ -62,6 +65,7 @@ models:
     repo_id: mistralai/Mistral-7B-Instruct-v0.3
     architecture_family: mistral
     chat_template_id: mistral_inst
+    prompt_profile_id: standard
     supports_system_prompt: true
     stop_tokens: ["</s>"]
     roles_supported: ["cluer", "guesser", "judge"]
@@ -81,6 +85,7 @@ models:
     repo_id: google/gemma-3-1b-it
     architecture_family: gemma3
     chat_template_id: gemma_chat
+    prompt_profile_id: compact_small
     supports_system_prompt: true
     stop_tokens: ["<end_of_turn>"]
     roles_supported: ["cluer", "guesser", "judge"]
@@ -100,6 +105,7 @@ models:
     repo_id: meta-llama/Llama-3.1-8B-Instruct
     architecture_family: llama3.1
     chat_template_id: llama3_chat
+    prompt_profile_id: standard
     supports_system_prompt: true
     stop_tokens: ["<|eot_id|>"]
     roles_supported: ["cluer", "guesser", "judge"]
@@ -120,6 +126,7 @@ models:
     filename: Qwen2.5-3B-Instruct-Q4_K_M.gguf
     architecture_family: qwen2.5
     chat_template_id: qwen_chatml
+    prompt_profile_id: compact_small
     supports_system_prompt: true
     stop_tokens: ["<|im_end|>"]
     roles_supported: ["cluer", "guesser", "judge"]
@@ -140,6 +147,7 @@ models:
     filename: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
     architecture_family: llama3.1
     chat_template_id: llama3_chat
+    prompt_profile_id: standard
     supports_system_prompt: true
     stop_tokens: ["<|eot_id|>"]
     roles_supported: ["cluer", "guesser", "judge"]

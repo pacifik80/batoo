@@ -13,7 +13,7 @@ from taboo_arena.app.transcript import (
 from taboo_arena.app.ui_transcript_panel import transcript_message_html
 
 
-def test_build_transcript_messages_shows_only_final_visible_turns_per_attempt() -> None:
+def test_build_transcript_messages_shows_rejected_clues_as_struck_and_creates_new_repair_bubbles() -> None:
     messages = build_transcript_messages(
         [
             {"event_type": "round_started", "round_id": "round_1"},
@@ -75,14 +75,18 @@ def test_build_transcript_messages_shows_only_final_visible_turns_per_attempt() 
         ]
     )
 
-    assert [message.role for message in messages] == ["meta", "cluer", "judge", "guesser"]
+    assert [message.role for message in messages] == ["meta", "cluer", "judge", "cluer", "judge", "guesser"]
     assert messages[0].text == "Round • round_1"
-    assert messages[1].text == "winter sleeper"
-    assert messages[2].text == "Approved."
-    assert messages[3].text == "bear"
+    assert messages[1].text == "forest giant"
+    assert messages[1].is_struck_out is True
+    assert messages[2].text == "Rejected clue."
+    assert messages[3].text == "winter sleeper"
+    assert messages[3].is_struck_out is False
+    assert messages[4].text == "Approved."
+    assert messages[5].text == "bear"
     assert messages[1].alignment == "left"
     assert messages[2].alignment == "center"
-    assert messages[3].alignment == "right"
+    assert messages[5].alignment == "right"
     assert any("hidden clue rejected" in step for step in messages[1].debug_timeline)
 
 
@@ -388,7 +392,7 @@ def test_build_transcript_messages_preserves_raw_payloads_only_in_debug() -> Non
     assert all("{" not in message.text for message in messages if message.role != "meta")
 
 
-def test_build_transcript_messages_hidden_repairs_do_not_create_extra_public_bubbles() -> None:
+def test_build_transcript_messages_rejected_repairs_create_new_public_bubbles() -> None:
     messages = build_transcript_messages(
         [
             {"event_type": "round_started", "round_id": "round_1"},
@@ -441,9 +445,9 @@ def test_build_transcript_messages_hidden_repairs_do_not_create_extra_public_bub
         ]
     )
 
-    assert [message.role for message in messages] == ["meta", "cluer", "judge", "judge"]
-    assert len([message for message in messages if message.role == "cluer"]) == 1
-    assert len([message for message in messages if message.message_id.endswith("judge-review:1")]) == 1
+    assert [message.role for message in messages] == ["meta", "cluer", "judge", "cluer", "judge", "judge"]
+    assert len([message for message in messages if message.role == "cluer"]) == 2
+    assert len([message for message in messages if "judge-review:" in message.message_id]) == 2
     assert len([message for message in messages if message.message_id.endswith("judge-guess:1")]) == 1
 
 
@@ -600,6 +604,7 @@ def test_transcript_message_html_renders_status_timeline_and_debug_details() -> 
             tone="accepted",
             alignment="left",
             status_label="selected",
+            is_struck_out=True,
             debug_timeline=["planning", "selected candidate accepted"],
             debug_sections=[
                 BubbleDebugSection(
@@ -615,6 +620,7 @@ def test_transcript_message_html_renders_status_timeline_and_debug_details() -> 
 
     assert "selected" in html
     assert "winter sleeper" in html
+    assert "transcript-text-struck" in html
     assert "Debug" in html
     assert "Timeline" in html
     assert "Selected angle" in html

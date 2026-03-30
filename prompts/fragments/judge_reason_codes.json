@@ -1,0 +1,24 @@
+{
+  "clue_block": [
+    "target_word",
+    "forbidden_word",
+    "blocked_term",
+    "obvious_rewrite",
+    "repeated_rejected_clue",
+    "format_violation",
+    "too_short"
+  ],
+  "clue_warning": [
+    "near_explicit_paraphrase",
+    "close_but_allowed",
+    "unknown_reason_code"
+  ],
+  "guess": [
+    "exact_target_present",
+    "multi_candidate_contains_target",
+    "wrapper_contains_target",
+    "target_absent",
+    "formatting_noise",
+    "unknown_reason_code"
+  ]
+}

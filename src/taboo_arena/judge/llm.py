@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, ValidationError
 from taboo_arena.cards.schemas import CardRecord
 from taboo_arena.models.registry import ModelEntry
 from taboo_arena.prompts.schemas import ClueJudgePayload, GuessJudgePayload
+from taboo_arena.prompts.store import load_prompt_fragment
 from taboo_arena.prompts.tasks import (
     build_clue_judge_messages,
     build_guess_judge_messages,
@@ -63,6 +64,7 @@ class NormalizedLLMJudge:
             accepted_clues=accepted_clues,
             rejected_clues=rejected_clues,
             attempt_no=attempt_no,
+            model_entry=model_entry,
         )
         response = model_manager.generate(
             model_entry=model_entry,
@@ -125,6 +127,7 @@ class NormalizedLLMJudge:
             match_reason=match_reason,
             candidate_spans=candidate_spans,
             warnings=warnings,
+            model_entry=model_entry,
         )
         response = model_manager.generate(
             model_entry=model_entry,
@@ -137,6 +140,7 @@ class NormalizedLLMJudge:
         try:
             payload = extract_first_json_object(response.text)
             result = GuessJudgeResult.model_validate(GuessJudgePayload.model_validate(payload).model_dump())
+            result.reason_codes = _normalize_guess_judge_codes(result.reason_codes)
         except (ValueError, ValidationError) as exc:
             result = GuessJudgeResult(
                 correct=False,
@@ -181,7 +185,9 @@ def _normalize_clue_judge_codes(
     warnings: list[str],
 ) -> tuple[list[str], list[str]]:
     """Demote warning-only analytic codes so they never hard-block clue acceptance."""
-    warning_only_codes = {"near_explicit_paraphrase"}
+    reason_codes = load_prompt_fragment("judge_reason_codes")
+    allowed_block_codes = {str(item).strip() for item in reason_codes["clue_block"]}
+    warning_only_codes = {str(item).strip() for item in reason_codes["clue_warning"]}
     normalized_blocks: list[str] = []
     normalized_warnings: list[str] = [item for item in warnings if item]
     for reason in block_reason_codes:
@@ -191,8 +197,25 @@ def _normalize_clue_judge_codes(
         if code in warning_only_codes:
             normalized_warnings.append(code)
             continue
+        if code not in allowed_block_codes:
+            normalized_warnings.append("unknown_reason_code")
+            continue
         normalized_blocks.append(code)
     return (
         dedupe_preserve_order(normalized_blocks),
         dedupe_preserve_order(normalized_warnings),
     )
+
+
+def _normalize_guess_judge_codes(reason_codes: list[str]) -> list[str]:
+    """Clamp guess-judge reason codes to the shared enum."""
+    allowed_codes = {
+        str(item).strip() for item in load_prompt_fragment("judge_reason_codes")["guess"]
+    }
+    normalized: list[str] = []
+    for reason in reason_codes:
+        code = str(reason).strip()
+        if not code:
+            continue
+        normalized.append(code if code in allowed_codes else "unknown_reason_code")
+    return dedupe_preserve_order(normalized)

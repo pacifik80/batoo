@@ -991,6 +991,11 @@ def _render_advanced_settings(
                 ],
                 key="custom_chat_template_id",
             )
+            prompt_profile_id = st.selectbox(
+                "Prompt profile",
+                options=["compact_small", "standard", "strict_judge"],
+                key="custom_prompt_profile_id",
+            )
         with custom_col_c:
             supports_system_prompt = st.checkbox(
                 "Supports system prompt",
@@ -1016,6 +1021,7 @@ def _render_advanced_settings(
                 key="custom_roles_supported",
             )
             gated = st.checkbox("Gated / auth required", key="custom_gated")
+            prompt_override_id = st.text_input("Prompt override id", key="custom_prompt_override_id")
 
         if st.button("Add custom model", key="add_custom_model"):
             try:
@@ -1030,6 +1036,8 @@ def _render_advanced_settings(
                         tokenizer_repo=tokenizer_repo or None,
                         architecture_family=architecture_family or "custom",
                         chat_template_id=chat_template_id,
+                        prompt_profile_id=prompt_profile_id,
+                        prompt_override_id=prompt_override_id or None,
                         supports_system_prompt=supports_system_prompt,
                         roles_supported=cast(
                             list[RoleName],

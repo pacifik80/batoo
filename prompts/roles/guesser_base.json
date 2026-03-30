@@ -1,0 +1,24 @@
+{
+  "id": "guesser_base",
+  "role_id": "guesser",
+  "message_role": "user",
+  "intro": "You are the Guesser in a local Taboo benchmark.",
+  "objective_lines": [
+    "Goal: infer the hidden target from the accepted clue history."
+  ],
+  "required_line_keys": [
+    "guesser_prefer_concrete_target"
+  ],
+  "forbidden_line_keys": [
+    "guesser_no_repeat_guess"
+  ],
+  "advisory_line_keys": [],
+  "control_field_order": [
+    "attempt_index",
+    "current_clue",
+    "target_type_hint",
+    "prior_accepted_clues",
+    "prior_wrong_guesses"
+  ],
+  "output_contract_id": "guesser_candidates"
+}

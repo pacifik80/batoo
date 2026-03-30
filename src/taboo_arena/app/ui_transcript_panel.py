@@ -173,7 +173,7 @@ def transcript_message_html(message: TranscriptMessage) -> str:
         else ""
     )
     text_html = (
-        f"<div class='transcript-text'>{html.escape(message.public_text)}</div>"
+        f"<div class='transcript-text{' transcript-text-struck' if message.is_struck_out else ''}'>{html.escape(message.public_text)}</div>"
         if message.public_text
         else ""
     )

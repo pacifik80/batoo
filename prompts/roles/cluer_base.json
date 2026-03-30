@@ -1,0 +1,32 @@
+{
+  "id": "cluer_base",
+  "role_id": "cluer",
+  "message_role": "user",
+  "intro": "You are the Cluer in a local Taboo benchmark.",
+  "objective_lines": [
+    "Goal: help the guesser identify the hidden target with short safe clues."
+  ],
+  "required_line_keys": [
+    "cluer_return_one_per_angle",
+    "cluer_use_only_allowed_angles"
+  ],
+  "forbidden_line_keys": [
+    "cluer_hide_target_and_blocked_terms"
+  ],
+  "advisory_line_keys": [],
+  "control_field_order": [
+    "attempt_index",
+    "retry_index",
+    "target",
+    "forbidden_words",
+    "allowed_angles",
+    "blocked_terms",
+    "blocked_prior_clues",
+    "blocked_angles",
+    "revision_notes",
+    "previous_accepted_clues",
+    "previous_rejected_clues",
+    "previous_wrong_guesses"
+  ],
+  "output_contract_id": "cluer_candidates"
+}

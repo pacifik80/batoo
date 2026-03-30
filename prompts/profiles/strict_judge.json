@@ -1,0 +1,31 @@
+{
+  "id": "strict_judge",
+  "description": "Compact enum-driven judge packaging.",
+  "section_style": "compact_control",
+  "include_section_titles": true,
+  "section_labels": {
+    "objective": "TASK",
+    "rules": "RULES"
+  },
+  "control_key_aliases": {
+    "attempt_index": "attempt",
+    "forbidden_words": "taboo_words",
+    "selected_clue": "clue",
+    "visible_guess": "guess",
+    "target_type_hint": "type_hint",
+    "candidate_answer_spans": "candidate_spans",
+    "deterministic_warnings": "matcher_warnings",
+    "allowed_block_reason_codes": "allowed_block_reason_codes",
+    "allowed_warning_codes": "allowed_warning_codes",
+    "allowed_reason_codes": "allowed_reason_codes"
+  },
+  "list_limits": {
+    "previous_accepted_clues": 3,
+    "previous_rejected_clues": 3,
+    "candidate_answer_spans": 3,
+    "deterministic_warnings": 3
+  },
+  "output_header": "OUTPUT_CONTRACT",
+  "control_header": "CONTROL_STATE",
+  "control_footer": "END_CONTROL_STATE"
+}
