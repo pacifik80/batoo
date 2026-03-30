@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 RoleLabel = Literal["system", "user", "assistant"]
 
@@ -23,6 +23,7 @@ class RenderedPrompt:
     prompt: str
     prompt_template_id: str
     stop_tokens: list[str]
+    add_special_tokens: bool = True
 
 
 def render_prompt(
@@ -31,16 +32,59 @@ def render_prompt(
     *,
     supports_system_prompt: bool,
     stop_tokens: list[str] | None = None,
+    tokenizer: Any | None = None,
 ) -> RenderedPrompt:
     """Render a role-based prompt into the format expected by a specific model family."""
     effective_messages = _coerce_system_prompt(messages, supports_system_prompt)
-    renderer = TEMPLATE_RENDERERS.get(template_id, _render_generic_completion)
-    rendered = renderer(effective_messages)
+    rendered, add_special_tokens = _render_prompt_text(
+        template_id,
+        effective_messages,
+        tokenizer=tokenizer,
+    )
     return RenderedPrompt(
         prompt=rendered,
         prompt_template_id=template_id if template_id in TEMPLATE_RENDERERS else "generic_completion",
         stop_tokens=list(stop_tokens or []),
+        add_special_tokens=add_special_tokens,
     )
+
+
+def _render_prompt_text(
+    template_id: str,
+    messages: list[PromptMessage],
+    *,
+    tokenizer: Any | None = None,
+) -> tuple[str, bool]:
+    tokenizer_rendered = _render_with_tokenizer_chat_template(messages, tokenizer=tokenizer)
+    if tokenizer_rendered is not None:
+        return tokenizer_rendered, False
+    renderer = TEMPLATE_RENDERERS.get(template_id, _render_generic_completion)
+    return renderer(messages), True
+
+
+def _render_with_tokenizer_chat_template(
+    messages: list[PromptMessage],
+    *,
+    tokenizer: Any | None,
+) -> str | None:
+    if tokenizer is None or not hasattr(tokenizer, "apply_chat_template"):
+        return None
+    chat_messages = [
+        {
+            "role": message.role,
+            "content": message.content,
+        }
+        for message in messages
+    ]
+    try:
+        rendered = tokenizer.apply_chat_template(
+            chat_messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    except Exception:
+        return None
+    return str(rendered)
 
 
 def _coerce_system_prompt(messages: list[PromptMessage], supports_system_prompt: bool) -> list[PromptMessage]:
@@ -67,6 +111,10 @@ def _coerce_system_prompt(messages: list[PromptMessage], supports_system_prompt:
 
 def _render_qwen_chatml(messages: list[PromptMessage]) -> str:
     segments: list[str] = []
+    if not messages or messages[0].role != "system":
+        segments.append(
+            "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>"
+        )
     for message in messages:
         segments.append(f"<|im_start|>{message.role}\n{message.content}\n<|im_end|>")
     segments.append("<|im_start|>assistant\n")
@@ -92,7 +140,7 @@ def _render_mistral_inst(messages: list[PromptMessage]) -> str:
         rendered.append("[INST] [/INST]")
     if not rendered[-1].endswith("[/INST]"):
         rendered.append("[INST] [/INST]")
-    return "".join(rendered)
+    return "<s>" + "".join(rendered)
 
 
 def _render_llama3_chat(messages: list[PromptMessage]) -> str:
@@ -106,7 +154,7 @@ def _render_llama3_chat(messages: list[PromptMessage]) -> str:
 
 
 def _render_gemma_chat(messages: list[PromptMessage]) -> str:
-    parts: list[str] = []
+    parts: list[str] = ["<bos>"]
     for message in messages:
         role = "model" if message.role == "assistant" else "user"
         if message.role == "system":
@@ -119,8 +167,8 @@ def _render_gemma_chat(messages: list[PromptMessage]) -> str:
 def _render_phi_chat(messages: list[PromptMessage]) -> str:
     parts: list[str] = []
     for message in messages:
-        parts.append(f"<|{message.role}|>\n{message.content}\n")
-    parts.append("<|assistant|>\n")
+        parts.append(f"<|{message.role}|>{message.content}<|end|>")
+    parts.append("<|assistant|>")
     return "".join(parts)
 
 
@@ -138,4 +186,3 @@ TEMPLATE_RENDERERS = {
     "phi_chat": _render_phi_chat,
     "generic_completion": _render_generic_completion,
 }
-

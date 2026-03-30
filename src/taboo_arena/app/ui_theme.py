@@ -582,6 +582,28 @@ def apply_theme() -> None:
         .transcript-debug-section:first-of-type {
           margin-top: 0.44rem;
         }
+        .transcript-debug-timeline {
+          display: grid;
+          gap: 0.26rem;
+        }
+        .transcript-debug-timeline-item {
+          position: relative;
+          padding-left: 1rem;
+          font-size: 0.78rem;
+          line-height: 1.35;
+          opacity: 0.82;
+        }
+        .transcript-debug-timeline-item::before {
+          content: "";
+          position: absolute;
+          left: 0.18rem;
+          top: 0.42rem;
+          width: 0.34rem;
+          height: 0.34rem;
+          border-radius: 999px;
+          background: currentColor;
+          opacity: 0.4;
+        }
         .transcript-debug-section-title {
           font-size: 0.68rem;
           font-weight: 700;

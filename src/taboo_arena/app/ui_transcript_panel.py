@@ -188,8 +188,20 @@ def transcript_message_html(message: TranscriptMessage) -> str:
 
 
 def _transcript_debug_html(message: TranscriptMessage) -> str:
-    if not message.debug_sections and not message.raw_artifacts:
+    if not message.debug_timeline and not message.debug_sections and not message.raw_artifacts:
         return ""
+    timeline_html = (
+        "<div class='transcript-debug-section'>"
+        "<div class='transcript-debug-section-title'>Timeline</div>"
+        "<div class='transcript-debug-timeline'>"
+        + "".join(
+            f"<div class='transcript-debug-timeline-item'>{html.escape(step)}</div>"
+            for step in message.debug_timeline
+        )
+        + "</div></div>"
+        if message.debug_timeline
+        else ""
+    )
     section_html = "".join(
         (
             "<div class='transcript-debug-section'>"
@@ -237,6 +249,6 @@ def _transcript_debug_html(message: TranscriptMessage) -> str:
     return (
         "<details class='transcript-debug'>"
         "<summary>Debug</summary>"
-        f"{section_html}{raw_html}"
+        f"{timeline_html}{section_html}{raw_html}"
         "</details>"
     )

@@ -11,9 +11,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 4.0
     default_generation_params:
-      temperature: 0.4
-      top_p: 0.9
-      max_tokens: 128
+      temperature: 0.30
+      top_p: 0.82
+      max_tokens: 384
     requires_hf_auth: false
     gated: false
     notes: Small starter model for all three roles.
@@ -30,9 +30,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 7.0
     default_generation_params:
-      temperature: 0.4
-      top_p: 0.9
-      max_tokens: 160
+      temperature: 0.34
+      top_p: 0.86
+      max_tokens: 512
     requires_hf_auth: false
     gated: false
     notes: Stronger local baseline with a moderate memory footprint.
@@ -49,9 +49,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 8.0
     default_generation_params:
-      temperature: 0.3
-      top_p: 0.9
-      max_tokens: 160
+      temperature: 0.34
+      top_p: 0.86
+      max_tokens: 512
     requires_hf_auth: false
     gated: false
     notes: Good compact instruct option for benchmark experiments.
@@ -68,9 +68,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 14.0
     default_generation_params:
-      temperature: 0.3
-      top_p: 0.9
-      max_tokens: 160
+      temperature: 0.38
+      top_p: 0.88
+      max_tokens: 384
     requires_hf_auth: false
     gated: false
     notes: Heavier but still practical on stronger local setups.
@@ -87,9 +87,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 4.5
     default_generation_params:
-      temperature: 0.3
-      top_p: 0.9
-      max_tokens: 128
+      temperature: 0.30
+      top_p: 0.82
+      max_tokens: 384
     requires_hf_auth: true
     gated: true
     notes: Gated Gemma family starter entry.
@@ -106,9 +106,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 16.0
     default_generation_params:
-      temperature: 0.3
-      top_p: 0.9
-      max_tokens: 160
+      temperature: 0.38
+      top_p: 0.88
+      max_tokens: 384
     requires_hf_auth: true
     gated: true
     notes: Gated Meta Llama starter entry.
@@ -126,9 +126,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 4.0
     default_generation_params:
-      temperature: 0.4
-      top_p: 0.9
-      max_tokens: 160
+      temperature: 0.30
+      top_p: 0.82
+      max_tokens: 384
     requires_hf_auth: false
     gated: false
     notes: Quantized GGUF entry for lighter local testing.
@@ -146,10 +146,9 @@ models:
     languages: ["en"]
     estimated_vram_gb: 8.0
     default_generation_params:
-      temperature: 0.3
-      top_p: 0.9
-      max_tokens: 160
+      temperature: 0.34
+      top_p: 0.86
+      max_tokens: 512
     requires_hf_auth: true
     gated: true
     notes: Quantized GGUF starter entry for gated Llama usage.
-

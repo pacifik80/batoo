@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from taboo_arena.utils.normalization import dedupe_preserve_order, normalize_text, strip_punctuation
+from taboo_arena.utils.structured_payloads import looks_like_structured_payload
 
 _SPLIT_PATTERN = re.compile(r"\s*(?:\bor\b|/|,|;|\|)\s*")
 
@@ -222,6 +223,20 @@ class GuessCanonicalizer:
         seen_shortlist_keys: set[str] = set()
         evaluations: list[GuessCandidateEvaluation] = []
         for guess_text in guesses:
+            if looks_like_structured_payload(guess_text):
+                analysis = self.analyze(guess_text)
+                match_result = self.match("", target)
+                match_result.reason = "structured_payload_detected"
+                evaluations.append(
+                    GuessCandidateEvaluation(
+                        guess_text_raw=guess_text,
+                        analysis=analysis,
+                        match_result=match_result,
+                        valid_new_keys=[],
+                        invalid_reason="structured_payload_guess",
+                    )
+                )
+                continue
             analysis = self.analyze(guess_text)
             match_result = self.match(guess_text, target)
             if not analysis.candidate_keys:

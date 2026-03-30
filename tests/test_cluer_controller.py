@@ -22,6 +22,27 @@ def test_parse_cluer_candidates_reads_structured_json() -> None:
     assert [candidate.clue for candidate in candidates] == ["large forest mammal", "found in the woods"]
 
 
+def test_parse_cluer_candidates_rejects_malformed_structured_output() -> None:
+    candidates, parse_mode = parse_cluer_candidates(
+        '{"candidates":[{"angle":"type","clue":"large forest mammal"}',
+        allowed_angles=[ClueAngle.TYPE, ClueAngle.USE, ClueAngle.CONTEXT],
+    )
+
+    assert candidates == []
+    assert parse_mode == "parse_failure"
+
+
+def test_parse_cluer_candidates_accepts_backslash_escaped_json_object() -> None:
+    candidates, parse_mode = parse_cluer_candidates(
+        '{\\"candidates\\":[{"angle":"type","clue":"large forest mammal"},{"angle":"use","clue":"found in the woods"}]}',
+        allowed_angles=[ClueAngle.TYPE, ClueAngle.USE, ClueAngle.CONTEXT],
+    )
+
+    assert parse_mode == "json"
+    assert [candidate.angle for candidate in candidates] == ["type", "use"]
+    assert [candidate.clue for candidate in candidates] == ["large forest mammal", "found in the woods"]
+
+
 def test_select_allowed_angles_rotates_and_avoids_used_angles() -> None:
     first = select_allowed_angles(attempt_no=1, used_angles=[], blocked_angles=[])
     second = select_allowed_angles(

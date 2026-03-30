@@ -26,12 +26,14 @@ from taboo_arena.app.jobs import ActiveJob, start_batch_job, start_single_round_
 from taboo_arena.app.session_facade import SessionFacade
 from taboo_arena.app.state import (
     applied_generation_params,
+    apply_generation_widget_state,
     choose_default_model_id,
     generation_status_text,
+    generation_widget_key,
     initialize_session_state,
-    mark_generation_dirty,
     prepare_category_selection,
     recommended_generation_defaults,
+    sync_generation_widget_state,
     sync_selected_model_generation_defaults,
 )
 from taboo_arena.app.ui_stats_panel import render_live_round_pulse_inline, render_round_pulse_inline
@@ -120,7 +122,12 @@ def _render_live_dashboard(
         memory_snapshot,
         current_logger,
     )
-    sync_selected_model_generation_defaults(st.session_state, selected_models)
+    target_vram_gb = memory_snapshot.vram_total_gb or memory_snapshot.vram_available_gb
+    sync_selected_model_generation_defaults(
+        st.session_state,
+        selected_models,
+        target_vram_gb=target_vram_gb,
+    )
     session.start_batch_clicked = False
     if session.current_error_message:
         st.error(str(session.current_error_message))
@@ -440,6 +447,7 @@ def _render_top_bar(
     top_left, top_mid, top_right = st.columns(3)
 
     selected_models: dict[str, ModelEntry] = {}
+    target_vram_gb = memory_snapshot.vram_total_gb or memory_snapshot.vram_available_gb
     for label, key, container in [
         ("Cluer", "cluer_model_id", top_left),
         ("Guesser", "guesser_model_id", top_mid),
@@ -480,7 +488,11 @@ def _render_top_bar(
                     )
                 st.session_state[key] = chosen_id
                 entry = registry.get(chosen_id)
-                sync_selected_model_generation_defaults(st.session_state, {role: entry})
+                sync_selected_model_generation_defaults(
+                    st.session_state,
+                    {role: entry},
+                    target_vram_gb=target_vram_gb,
+                )
                 with settings_col:
                     role_settings_clicked = st.button(
                         "⚙",
@@ -489,7 +501,12 @@ def _render_top_bar(
                         width="content",
                     )
                 if role_settings_clicked:
-                    _render_role_settings_dialog(role=role, entry=entry, model_manager=model_manager)
+                    _render_role_settings_dialog(
+                        role=role,
+                        entry=entry,
+                        model_manager=model_manager,
+                        target_vram_gb=target_vram_gb,
+                    )
                 selected_models[label.lower()] = entry
                 console_state = _build_role_console_state(
                     role=role,
@@ -541,9 +558,15 @@ def _render_role_settings_dialog(
     role: RoleName,
     entry: ModelEntry,
     model_manager: ModelManager,
+    target_vram_gb: float | None,
 ) -> None:
     label = role.capitalize()
-    defaults = recommended_generation_defaults(role, entry)
+    sync_selected_model_generation_defaults(
+        st.session_state,
+        {role: entry},
+        target_vram_gb=target_vram_gb,
+    )
+    defaults = recommended_generation_defaults(role, entry, target_vram_gb=target_vram_gb)
     st.markdown(f"**{label} model**")
     st.caption(entry.display_name)
     st.caption(_model_status_text(entry, model_manager))
@@ -556,15 +579,21 @@ def _render_role_settings_dialog(
         "Applied now: "
         f"temp {applied.temperature:.2f}, top_p {applied.top_p:.2f}, max_tokens {applied.max_tokens}"
     )
-    st.caption(generation_status_text(st.session_state, role, entry))
+    st.caption(generation_status_text(st.session_state, role, entry, target_vram_gb=target_vram_gb))
     if st.button(
         "Use recommended defaults",
         key=f"{role}_dialog_apply_defaults",
         width="stretch",
     ):
-        sync_selected_model_generation_defaults(st.session_state, {role: entry}, force=True)
+        sync_selected_model_generation_defaults(
+            st.session_state,
+            {role: entry},
+            force=True,
+            target_vram_gb=target_vram_gb,
+        )
+        sync_generation_widget_state(st.session_state, role)
         st.rerun()
-    _render_generation_inputs(label, role, entry, st)
+    _render_generation_inputs(label, role, entry, st, target_vram_gb=target_vram_gb)
 
 
 @st.dialog("Arena settings")
@@ -796,6 +825,7 @@ def _render_advanced_settings(
     model_manager: ModelManager,
     memory_snapshot: SystemMemorySnapshot,
 ) -> None:
+    target_vram_gb = memory_snapshot.vram_total_gb or memory_snapshot.vram_available_gb
     with st.expander("Advanced settings", expanded=False):
         settings_col_a, settings_col_b, settings_col_c = st.columns(3)
         with settings_col_a:
@@ -858,11 +888,34 @@ def _render_advanced_settings(
                 key="apply_selected_model_defaults",
                 width="stretch",
             ):
-                sync_selected_model_generation_defaults(st.session_state, selected_models, force=True)
+                sync_selected_model_generation_defaults(
+                    st.session_state,
+                    selected_models,
+                    force=True,
+                    target_vram_gb=target_vram_gb,
+                )
         cluer_col, guesser_col, judge_col = st.columns(3)
-        _render_generation_inputs("Cluer", "cluer", selected_models["cluer"], cluer_col)
-        _render_generation_inputs("Guesser", "guesser", selected_models["guesser"], guesser_col)
-        _render_generation_inputs("Judge", "judge", selected_models["judge"], judge_col)
+        _render_generation_inputs(
+            "Cluer",
+            "cluer",
+            selected_models["cluer"],
+            cluer_col,
+            target_vram_gb=target_vram_gb,
+        )
+        _render_generation_inputs(
+            "Guesser",
+            "guesser",
+            selected_models["guesser"],
+            guesser_col,
+            target_vram_gb=target_vram_gb,
+        )
+        _render_generation_inputs(
+            "Judge",
+            "judge",
+            selected_models["judge"],
+            judge_col,
+            target_vram_gb=target_vram_gb,
+        )
 
         with st.expander("Batch lab (parked for now)", expanded=False):
             batch_col_a, batch_col_b, batch_col_c = st.columns(3)
@@ -1000,12 +1053,24 @@ def _render_generation_inputs(
     key_prefix: str,
     entry: ModelEntry,
     container: Any | None = None,
+    *,
+    target_vram_gb: float | None = None,
 ) -> None:
     if container is not None and hasattr(container, "__enter__") and hasattr(container, "__exit__"):
         with container:
-            _render_generation_inputs_body(label=label, key_prefix=key_prefix, entry=entry)
+            _render_generation_inputs_body(
+                label=label,
+                key_prefix=key_prefix,
+                entry=entry,
+                target_vram_gb=target_vram_gb,
+            )
         return
-    _render_generation_inputs_body(label=label, key_prefix=key_prefix, entry=entry)
+    _render_generation_inputs_body(
+        label=label,
+        key_prefix=key_prefix,
+        entry=entry,
+        target_vram_gb=target_vram_gb,
+    )
 
 
 def _render_generation_inputs_body(
@@ -1013,23 +1078,25 @@ def _render_generation_inputs_body(
     label: str,
     key_prefix: str,
     entry: ModelEntry,
+    target_vram_gb: float | None = None,
 ) -> None:
     """Render generation controls in the current Streamlit context."""
     st.markdown(f"**{label}**")
     role = cast(RoleName, key_prefix)
-    defaults = recommended_generation_defaults(role, entry)
+    defaults = recommended_generation_defaults(role, entry, target_vram_gb=target_vram_gb)
+    sync_generation_widget_state(st.session_state, role)
     st.caption(
         "Recommended defaults: "
         f"temp {defaults.temperature:.2f}, top_p {defaults.top_p:.2f}, max_tokens {defaults.max_tokens}"
     )
-    st.caption(generation_status_text(st.session_state, role, entry))
+    st.caption(generation_status_text(st.session_state, role, entry, target_vram_gb=target_vram_gb))
     st.slider(
         "temperature",
         min_value=0.0,
         max_value=1.5,
         step=0.05,
-        key=f"{key_prefix}_temperature",
-        on_change=_mark_generation_dirty,
+        key=generation_widget_key(role, "temperature"),
+        on_change=_apply_generation_widget_change,
         args=(role,),
     )
     st.slider(
@@ -1037,16 +1104,16 @@ def _render_generation_inputs_body(
         min_value=0.1,
         max_value=1.0,
         step=0.05,
-        key=f"{key_prefix}_top_p",
-        on_change=_mark_generation_dirty,
+        key=generation_widget_key(role, "top_p"),
+        on_change=_apply_generation_widget_change,
         args=(role,),
     )
     st.number_input(
         "max_tokens",
         min_value=16,
         max_value=1024,
-        key=f"{key_prefix}_max_tokens",
-        on_change=_mark_generation_dirty,
+        key=generation_widget_key(role, "max_tokens"),
+        on_change=_apply_generation_widget_change,
         args=(role,),
     )
 
@@ -1090,8 +1157,8 @@ def _render_memory_fit_summary(
         st.warning(summary_text)
 
 
-def _mark_generation_dirty(role: RoleName) -> None:
-    mark_generation_dirty(st.session_state, role)
+def _apply_generation_widget_change(role: RoleName) -> None:
+    apply_generation_widget_state(st.session_state, role)
 
 
 def _format_gb(value: float | None, *, decimals: int = 2) -> str:

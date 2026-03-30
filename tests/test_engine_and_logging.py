@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from taboo_arena.config import RunSettings
@@ -36,13 +37,31 @@ def _entry(model_id: str) -> ModelEntry:
     )
 
 
+def _cluer_candidates(*candidates: tuple[str, str]) -> str:
+    return json.dumps(
+        {
+            "candidates": [
+                {"angle": angle, "clue": clue}
+                for angle, clue in candidates
+            ]
+        }
+    )
+
+
+def _guesser_candidates(*guesses: str) -> str:
+    return json.dumps({"guesses": list(guesses)})
+
+
 def test_round_engine_solves_after_hidden_repair(sample_card, tmp_path: Path) -> None:
     logger = RunLogger(log_root=tmp_path, console_trace=False)
     manager = FakeModelManager(
         responses={
-            "cluer": ["Bear clue", "forest giant"],
+            "cluer": [
+                _cluer_candidates(("type", "Bear clue")),
+                _cluer_candidates(("use", "forest giant")),
+            ],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ["Bear"],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         }
     )
     settings = RunSettings()
@@ -68,14 +87,14 @@ def test_round_engine_selects_best_valid_clue_from_candidate_batch(sample_card, 
     manager = FakeModelManager(
         responses={
             "cluer": [
-                '{"candidates":['
-                '{"angle":"type","clue":"Bear animal"},'
-                '{"angle":"use","clue":"hibernates through winter"},'
-                '{"angle":"context","clue":"forest giant"}'
-                ']}'
+                _cluer_candidates(
+                    ("type", "Bear animal"),
+                    ("use", "hibernates through winter"),
+                    ("context", "forest giant"),
+                )
             ],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ['{"guesses":["Bear","Wolf","Fox"]}'],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         }
     )
     settings = RunSettings()
@@ -90,6 +109,7 @@ def test_round_engine_selects_best_valid_clue_from_candidate_batch(sample_card, 
 
     assert result.solved is True
     clue_event = next(event for event in logger.events if event["event_type"] == "clue_draft_generated")
+    assert clue_event["visible_clue_text"] == "hibernates through winter"
     assert clue_event["selected_angle"] == "use"
     assert clue_event["clue_text_raw"] == "hibernates through winter"
 
@@ -99,19 +119,19 @@ def test_round_engine_logs_internal_clue_retry_when_candidate_batch_fails(sample
     manager = FakeModelManager(
         responses={
             "cluer": [
-                '{"candidates":['
-                '{"angle":"type","clue":"Bear animal"},'
-                '{"angle":"use","clue":"grizzly sleeper"},'
-                '{"angle":"context","clue":"pooh friend"}'
-                ']}',
-                '{"candidates":['
-                '{"angle":"effect","clue":"hibernates through winter"},'
-                '{"angle":"part_whole","clue":"large pawed mammal"},'
-                '{"angle":"historical_association","clue":"seen in wilderness stories"}'
-                ']}',
+                _cluer_candidates(
+                    ("type", "Bear animal"),
+                    ("use", "grizzly sleeper"),
+                    ("context", "pooh friend"),
+                ),
+                _cluer_candidates(
+                    ("effect", "hibernates through winter"),
+                    ("part_whole", "large pawed mammal"),
+                    ("historical_association", "seen in wilderness stories"),
+                ),
             ],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ['{"guesses":["Bear","Wolf","Fox"]}'],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         }
     )
     settings = RunSettings()
@@ -133,13 +153,76 @@ def test_round_engine_logs_internal_clue_retry_when_candidate_batch_fails(sample
     assert selected_event["clue_internal_cycle_no"] == 2
 
 
+def test_round_engine_hides_malformed_structured_cluer_output_until_retry(sample_card, tmp_path: Path) -> None:
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    malformed_payload = '{"candidates":[{"angle":"use","clue":"forest giant"}'
+    manager = FakeModelManager(
+        responses={
+            "cluer": [
+                malformed_payload,
+                _cluer_candidates(("use", "forest giant")),
+            ],
+            "judge": [CLUE_ALLOW, GUESS_CORRECT],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
+        }
+    )
+    settings = RunSettings()
+    engine = RoundEngine(model_manager=manager, logger=logger, settings=settings)
+
+    result = engine.play_round(
+        card=sample_card,
+        cluer_entry=_entry("cluer"),
+        guesser_entry=_entry("guesser"),
+        judge_entry=_entry("judge"),
+    )
+
+    assert result.solved is True
+    clue_generation_events = [
+        event for event in logger.events if event["event_type"] == "clue_candidates_generated"
+    ]
+    assert clue_generation_events[0]["clue_candidate_parse_mode"] == "parse_failure"
+    assert clue_generation_events[0]["raw_model_output"] == malformed_payload
+    retry_event = next(event for event in logger.events if event["event_type"] == "clue_internal_retry_requested")
+    assert "parse_failure" in retry_event["reason_codes"]
+    clue_event = next(event for event in logger.events if event["event_type"] == "clue_draft_generated")
+    assert clue_event["visible_clue_text"] == "forest giant"
+
+
+def test_round_engine_accepts_backslash_escaped_structured_cluer_output(sample_card, tmp_path: Path) -> None:
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    manager = FakeModelManager(
+        responses={
+            "cluer": [
+                '{\\"candidates\\":[{"angle":"type","clue":"Bear animal"},{"angle":"use","clue":"hibernates through winter"},{"angle":"context","clue":"forest giant"}]}'
+            ],
+            "judge": [CLUE_ALLOW, GUESS_CORRECT],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
+        }
+    )
+    settings = RunSettings()
+    engine = RoundEngine(model_manager=manager, logger=logger, settings=settings)
+
+    result = engine.play_round(
+        card=sample_card,
+        cluer_entry=_entry("cluer"),
+        guesser_entry=_entry("guesser"),
+        judge_entry=_entry("judge"),
+    )
+
+    assert result.solved is True
+    clue_event = next(event for event in logger.events if event["event_type"] == "clue_draft_generated")
+    assert clue_event["visible_clue_text"] == "hibernates through winter"
+    candidate_event = next(event for event in logger.events if event["event_type"] == "clue_candidates_generated")
+    assert candidate_event["clue_candidate_parse_mode"] == "json"
+
+
 def test_batch_runner_smoke(sample_card, tmp_path: Path) -> None:
     logger = RunLogger(log_root=tmp_path, console_trace=False)
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant"],
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ["Bear"],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         }
     )
     settings = RunSettings()
@@ -164,9 +247,9 @@ def test_round_engine_passes_cluer_guard_phrases(sample_card, tmp_path: Path) ->
     calls: list[dict[str, object]] = []
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant"],
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ["Bear"],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         },
         calls=calls,
     )
@@ -187,6 +270,37 @@ def test_round_engine_passes_cluer_guard_phrases(sample_card, tmp_path: Path) ->
     assert "grizzly" in banned_phrases
 
 
+def test_round_engine_passes_only_visible_clue_text_to_guesser(sample_card, tmp_path: Path) -> None:
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    calls: list[dict[str, object]] = []
+    raw_cluer_payload = _cluer_candidates(("use", "forest giant"))
+    manager = FakeModelManager(
+        responses={
+            "cluer": [raw_cluer_payload],
+            "judge": [CLUE_ALLOW, GUESS_CORRECT],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
+        },
+        calls=calls,
+    )
+    settings = RunSettings()
+    engine = RoundEngine(model_manager=manager, logger=logger, settings=settings)
+
+    result = engine.play_round(
+        card=sample_card,
+        cluer_entry=_entry("cluer"),
+        guesser_entry=_entry("guesser"),
+        judge_entry=_entry("judge"),
+    )
+
+    assert result.solved is True
+    guesser_call = next(call for call in calls if call["trace_role"] == "guesser")
+    messages = guesser_call["messages"]
+    assert isinstance(messages, list)
+    message_text = "\n".join(str(getattr(message, "content", "")) for message in messages)
+    assert "forest giant" in message_text
+    assert raw_cluer_payload not in message_text
+
+
 def test_round_engine_passes_previous_wrong_guesses_as_guesser_guard_phrases(
     sample_card,
     tmp_path: Path,
@@ -195,9 +309,15 @@ def test_round_engine_passes_previous_wrong_guesses_as_guesser_guard_phrases(
     calls: list[dict[str, object]] = []
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant", "winter sleeper"],
+            "cluer": [
+                _cluer_candidates(("use", "forest giant")),
+                _cluer_candidates(("effect", "winter sleeper")),
+            ],
             "judge": [CLUE_ALLOW, GUESS_INCORRECT, CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ["Wolf", "Bear"],
+            "guesser": [
+                _guesser_candidates("Wolf", "Fox", "Animal"),
+                _guesser_candidates("Bear", "Wolf", "Fox"),
+            ],
         },
         calls=calls,
     )
@@ -242,9 +362,9 @@ def test_round_engine_records_prompt_trace_fields_without_event_field_collision(
     }
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant"],
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ["Bear"],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         }
     )
     settings = RunSettings()
@@ -269,9 +389,15 @@ def test_round_engine_honors_configured_max_guess_attempts(sample_card, tmp_path
     logger = RunLogger(log_root=tmp_path, console_trace=False)
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant", "forest giant again"],
+            "cluer": [
+                _cluer_candidates(("use", "forest giant")),
+                _cluer_candidates(("effect", "forest giant again")),
+            ],
             "judge": [CLUE_ALLOW, GUESS_INCORRECT, CLUE_ALLOW, GUESS_INCORRECT],
-            "guesser": ["Wolf", "Fox"],
+            "guesser": [
+                _guesser_candidates("Wolf", "Animal", "Fox"),
+                _guesser_candidates("Fox", "Animal", "Wolf"),
+            ],
         }
     )
     settings = RunSettings(max_guess_attempts=2)
@@ -289,16 +415,82 @@ def test_round_engine_honors_configured_max_guess_attempts(sample_card, tmp_path
     assert result.terminal_reason == "max_guess_attempts_reached"
 
 
+def test_round_engine_hides_malformed_structured_guesser_output_until_retry(sample_card, tmp_path: Path) -> None:
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    malformed_payload = '{"guesses":["Bear","Wolf","Fox"]'
+    manager = FakeModelManager(
+        responses={
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
+            "judge": [CLUE_ALLOW, GUESS_CORRECT],
+            "guesser": [
+                malformed_payload,
+                _guesser_candidates("Bear", "Wolf", "Fox"),
+            ],
+        }
+    )
+    settings = RunSettings()
+    engine = RoundEngine(model_manager=manager, logger=logger, settings=settings)
+
+    result = engine.play_round(
+        card=sample_card,
+        cluer_entry=_entry("cluer"),
+        guesser_entry=_entry("guesser"),
+        judge_entry=_entry("judge"),
+    )
+
+    assert result.solved is True
+    shortlist_events = [
+        event for event in logger.events if event["event_type"] == "guess_shortlist_generated"
+    ]
+    assert shortlist_events[0]["guess_parse_mode"] == "parse_failure"
+    assert shortlist_events[0]["raw_model_output"] == malformed_payload
+    retry_event = next(event for event in logger.events if event["event_type"] == "guess_hidden_retry_requested")
+    assert "parse_failure" in retry_event["reason_codes"]
+    guess_event = next(event for event in logger.events if event["event_type"] == "guess_generated")
+    assert guess_event["visible_guess_text"] == "Bear"
+
+
+def test_round_engine_accepts_backslash_escaped_structured_guesser_output(sample_card, tmp_path: Path) -> None:
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    manager = FakeModelManager(
+        responses={
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
+            "judge": [CLUE_ALLOW, GUESS_CORRECT],
+            "guesser": [
+                '{\\"guesses\\":["Bear","Wolf","Fox"]}',
+            ],
+        }
+    )
+    settings = RunSettings()
+    engine = RoundEngine(model_manager=manager, logger=logger, settings=settings)
+
+    result = engine.play_round(
+        card=sample_card,
+        cluer_entry=_entry("cluer"),
+        guesser_entry=_entry("guesser"),
+        judge_entry=_entry("judge"),
+    )
+
+    assert result.solved is True
+    guess_event = next(event for event in logger.events if event["event_type"] == "guess_generated")
+    assert guess_event["visible_guess_text"] == "Bear"
+    shortlist_event = next(event for event in logger.events if event["event_type"] == "guess_shortlist_generated")
+    assert shortlist_event["guess_parse_mode"] == "json"
+
+
 def test_round_engine_uses_hidden_guess_retry_for_repeated_wrapper_variants(sample_card, tmp_path: Path) -> None:
     logger = RunLogger(log_root=tmp_path, console_trace=False)
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant", "winter sleeper"],
+            "cluer": [
+                _cluer_candidates(("use", "forest giant")),
+                _cluer_candidates(("effect", "winter sleeper")),
+            ],
             "judge": [CLUE_ALLOW, GUESS_INCORRECT, CLUE_ALLOW, GUESS_CORRECT],
             "guesser": [
-                '{"guesses":["wolf","animal","fox"]}',
-                '{"guesses":["my guess is wolf","the wolf","wolf"]}',
-                '{"guesses":["Bear","Fox","Animal"]}',
+                _guesser_candidates("wolf", "animal", "fox"),
+                _guesser_candidates("my guess is wolf", "the wolf", "wolf"),
+                _guesser_candidates("Bear", "Fox", "Animal"),
             ],
         }
     )
@@ -331,7 +523,7 @@ def test_round_engine_keeps_deterministic_correct_guess_when_guess_judge_disagre
     logger = RunLogger(log_root=tmp_path, console_trace=False)
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant"],
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
             "judge": [
                 CLUE_ALLOW,
                 (
@@ -339,7 +531,7 @@ def test_round_engine_keeps_deterministic_correct_guess_when_guess_judge_disagre
                     '"matched_surface_forms":[],"judge_version":"guess_judge_v1"}'
                 ),
             ],
-            "guesser": ['{"guesses":["Bear","Wolf","Fox"]}'],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         }
     )
     settings = RunSettings()
@@ -365,9 +557,9 @@ def test_round_engine_logs_specific_wrapper_match_reason(sample_card, tmp_path: 
     logger = RunLogger(log_root=tmp_path, console_trace=False)
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant"],
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ["my guess is Bear"],
+            "guesser": [_guesser_candidates("my guess is Bear", "Wolf", "Fox")],
         }
     )
     settings = RunSettings()
@@ -382,6 +574,7 @@ def test_round_engine_logs_specific_wrapper_match_reason(sample_card, tmp_path: 
 
     assert result.solved is True
     guess_event = next(event for event in logger.events if event["event_type"] == "guess_generated")
+    assert guess_event["visible_guess_text"] == "my guess is Bear"
     assert guess_event["guess_match_reason"] == "normalized_wrapper_match"
     assert "normalized_wrapper_match" in guess_event["guess_match_warnings"]
 

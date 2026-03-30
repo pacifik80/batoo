@@ -49,6 +49,7 @@ class TextGenerationBackend(Protocol):
         generation_params: GenerationParams,
         stop_tokens: list[str],
         prompt_template_id: str,
+        add_special_tokens: bool = True,
         banned_phrases: list[str] | None = None,
         compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:
@@ -212,12 +213,13 @@ class TransformersGenerator:
         generation_params: GenerationParams,
         stop_tokens: list[str],
         prompt_template_id: str,
+        add_special_tokens: bool = True,
         banned_phrases: list[str] | None = None,
         compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:
         try:
             started = perf_counter()
-            inputs = self.tokenizer(prompt, return_tensors="pt")
+            inputs = self.tokenizer(prompt, return_tensors="pt", add_special_tokens=add_special_tokens)
             model_device = getattr(self.model, "device", None)
             if model_device is not None:
                 inputs = {name: tensor.to(model_device) for name, tensor in inputs.items()}
@@ -330,6 +332,7 @@ class LlamaCppGenerator:
         generation_params: GenerationParams,
         stop_tokens: list[str],
         prompt_template_id: str,
+        add_special_tokens: bool = True,
         banned_phrases: list[str] | None = None,
         compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:

@@ -54,13 +54,13 @@ def latest_round_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMessage]:
     """Project controller events into public dialogue bubbles plus hidden debug details."""
     messages: list[TranscriptMessage | None] = []
-    clue_indexes: dict[tuple[int, int], int] = {}
-    clue_judge_indexes: dict[tuple[int, int], int] = {}
+    clue_indexes: dict[int, int] = {}
+    clue_judge_indexes: dict[int, int] = {}
     guess_indexes: dict[int, int] = {}
     guess_judge_indexes: dict[int, int] = {}
-    pending_clue_public_text: dict[tuple[int, int], str] = {}
+    pending_clue_public_text: dict[int, str] = {}
     active_round_id: str | None = None
-    last_clue_key: tuple[int, int] | None = None
+    last_clue_key: int | None = None
 
     for event in events:
         round_id = _event_round_id(event, active_round_id)
@@ -85,19 +85,21 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
 
         attempt_no = int(event.get("attempt_no", 0) or 0)
         repair_no = int(event.get("clue_repair_no", 0) or 0)
-        clue_key = (attempt_no, repair_no)
+        clue_key = attempt_no
         event_type = str(event.get("event_type", ""))
-        if attempt_no > 0 and repair_no > 0 and event_type.startswith("clue_"):
+        if attempt_no > 0 and event_type.startswith("clue_"):
             last_clue_key = clue_key
 
         if event_type == "clue_draft_started":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.status_label = _cluer_status(event_type, repair_no)
+            _append_timeline(clue_message, clue_message.status_label)
             continue
 
         if event_type == "clue_candidate_cycle_started":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.status_label = _cluer_status(event_type, repair_no)
+            _append_timeline(clue_message, clue_message.status_label)
             _set_debug_section(
                 clue_message,
                 "Planning",
@@ -112,8 +114,15 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "clue_candidates_generated":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.status_label = _cluer_status(event_type, repair_no)
+            _append_timeline(clue_message, "drafting candidates")
+            _append_timeline(
+                clue_message,
+                "candidate batch parsed"
+                if _optional_text(event.get("clue_candidate_parse_mode")) == "json"
+                else f"candidate batch {_optional_text(event.get('clue_candidate_parse_mode')) or 'rejected'}",
+            )
             generated_candidates = _string_list(event.get("clue_candidate_clues"))
             _set_debug_section(
                 clue_message,
@@ -134,11 +143,17 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 "Cluer parse mode",
                 _optional_text(event.get("clue_candidate_parse_mode")),
             )
+            _set_raw_artifact(
+                clue_message,
+                "Cluer raw model output",
+                _optional_text(event.get("raw_model_output")),
+            )
             continue
 
         if event_type == "clue_candidate_validation_completed":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.status_label = _cluer_status(event_type, repair_no)
+            _append_timeline(clue_message, "hard filter completed")
             _set_debug_section(
                 clue_message,
                 "Validation",
@@ -154,8 +169,9 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "clue_candidate_selected":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.status_label = _cluer_status(event_type, repair_no)
+            _append_timeline(clue_message, "selected candidate")
             _set_debug_section(
                 clue_message,
                 "Summary",
@@ -174,18 +190,25 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "clue_draft_generated":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.status_label = _cluer_status(event_type, repair_no)
-            pending_text = _safe_cluer_public_text(_optional_text(event.get("clue_text_raw")))
-            pending_clue_public_text[clue_key] = pending_text
-            clue_message.pending_public_text = pending_text
+            pending_text = _optional_text(event.get("visible_clue_text"))
+            if pending_text:
+                pending_clue_public_text[clue_key] = pending_text
+                clue_message.public_text = pending_text
+                clue_message.pending_public_text = pending_text
+                clue_message.status_label = None
+                _append_timeline(clue_message, "visible clue candidate prepared")
+            else:
+                clue_message.pending_public_text = None
+                _append_timeline(clue_message, "candidate prepared")
             _set_prompt_metadata(clue_message, event)
             _set_debug_section(
                 clue_message,
                 "Summary",
                 [
                     _debug_field("Selected angle", _optional_text(event.get("selected_angle"))),
-                    _debug_field("Selected clue candidate", pending_text),
+                    _debug_field("Selected visible clue", pending_text),
                 ],
             )
             _set_debug_section(
@@ -198,8 +221,9 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "clue_internal_retry_requested":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.status_label = _cluer_status(event_type, repair_no)
+            _append_timeline(clue_message, f"hidden repair {repair_no} requested")
             _set_debug_section(
                 clue_message,
                 "Retries",
@@ -219,9 +243,9 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 clue_judge_indexes,
                 round_id,
                 attempt_no,
-                repair_no,
             )
             judge_message.status_label = "checking rules"
+            _append_timeline(judge_message, "checking rules")
             continue
 
         if event_type == "llm_validation_completed":
@@ -233,21 +257,26 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                     existing_clue_message.pending_public_text = None
                     existing_clue_message.status_label = None
                     existing_clue_message.tone = "pending"
+                    _append_timeline(existing_clue_message, "selected candidate rejected")
                 else:
                     existing_clue_message.public_text = pending_clue_public_text.get(clue_key, "")
                     existing_clue_message.pending_public_text = None
                     existing_clue_message.status_label = None
                     existing_clue_message.tone = "accepted"
+                    _append_timeline(existing_clue_message, "selected candidate accepted")
 
             judge_message = _ensure_clue_judge_message(
                 messages,
                 clue_judge_indexes,
                 round_id,
                 attempt_no,
-                repair_no,
             )
             judge_message.status_label = None
             judge_message.public_text = _clue_judge_public_text(event)
+            _append_timeline(
+                judge_message,
+                "approved" if str(event.get("final_judge_verdict", "")).strip() != "fail" else "rejected",
+            )
             _set_prompt_metadata(judge_message, event)
             _set_debug_section(
                 judge_message,
@@ -277,13 +306,15 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "clue_accepted":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
-            clue_message.public_text = _safe_cluer_public_text(
-                _optional_text(event.get("clue_text_raw")) or pending_clue_public_text.get(clue_key)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
+            clue_message.public_text = (
+                _optional_text(event.get("visible_clue_text"))
+                or pending_clue_public_text.get(clue_key, "")
             )
             clue_message.pending_public_text = None
             clue_message.status_label = None
             clue_message.tone = "accepted"
+            _append_timeline(clue_message, "accepted visible clue")
             _set_debug_section(
                 clue_message,
                 "Summary",
@@ -296,11 +327,12 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "clue_repair_requested":
-            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no, repair_no)
+            clue_message = _ensure_clue_message(messages, clue_indexes, round_id, attempt_no)
             clue_message.tone = "pending"
             clue_message.status_label = None
             clue_message.public_text = ""
             clue_message.pending_public_text = None
+            _append_timeline(clue_message, "hidden clue rejected")
             _set_debug_section(
                 clue_message,
                 "Retries",
@@ -316,7 +348,6 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 clue_judge_indexes,
                 round_id,
                 attempt_no,
-                repair_no,
             )
             judge_message.status_label = None
             judge_message.public_text = (
@@ -324,6 +355,7 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 if _contains_parse_failure(event.get("llm_judge_reasons"))
                 else "Rejected clue."
             )
+            _append_timeline(judge_message, "rejected")
             _set_prompt_metadata(judge_message, event)
             _set_debug_section(
                 judge_message,
@@ -352,11 +384,18 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
         if event_type == "guess_started":
             guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
             guess_message.status_label = "forming hypotheses"
+            _append_timeline(guess_message, "forming hypotheses")
             continue
 
         if event_type == "guess_shortlist_generated":
             guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
             guess_message.status_label = "deduping"
+            _append_timeline(
+                guess_message,
+                "shortlist parsed"
+                if _optional_text(event.get("guess_parse_mode")) == "json"
+                else f"shortlist {_optional_text(event.get('guess_parse_mode')) or 'rejected'}",
+            )
             shortlist = _string_list(event.get("guess_shortlist_candidates"))
             _set_debug_section(
                 guess_message,
@@ -386,11 +425,17 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 "Guesser parse mode",
                 _optional_text(event.get("guess_parse_mode")),
             )
+            _set_raw_artifact(
+                guess_message,
+                "Guesser raw model output",
+                _optional_text(event.get("raw_model_output")),
+            )
             continue
 
         if event_type == "guess_hidden_retry_requested":
             guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
             guess_message.status_label = "forming hypotheses"
+            _append_timeline(guess_message, f"hidden retry {int(event.get('guess_hidden_retry_no', 0) or 0)} requested")
             _set_debug_section(
                 guess_message,
                 "Retries",
@@ -410,6 +455,7 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
                 attempt_no,
             )
             judge_message.status_label = "verifying guess"
+            _append_timeline(judge_message, "verifying guess")
             continue
 
         if event_type == "guess_validation_completed":
@@ -421,6 +467,7 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             )
             judge_message.status_label = None
             judge_message.public_text = _guess_judge_public_text(event)
+            _append_timeline(judge_message, "final verdict recorded")
             _set_prompt_metadata(judge_message, event)
             _set_debug_section(
                 judge_message,
@@ -454,12 +501,14 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             guess_message.public_text = _guess_public_text(event)
             guess_message.tone = "success" if final_correct else "guess"
             guess_message.status_label = None
+            _append_timeline(guess_message, "visible guess selected")
+            _append_timeline(guess_message, "canonicalization complete")
             _set_prompt_metadata(guess_message, event)
             _set_debug_section(
                 guess_message,
                 "Summary",
                 [
-                    _debug_field("Selected visible guess", _optional_text(event.get("guess_text_raw"))),
+                    _debug_field("Selected visible guess", _optional_text(event.get("visible_guess_text"))),
                     _debug_field("Match status", _optional_text(event.get("guess_match_status"))),
                     _debug_field("Match reason", _optional_text(event.get("guess_match_reason"))),
                     _debug_field("Hidden retry count", _optional_text(event.get("guess_hidden_retry_count"))),
@@ -514,23 +563,21 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
 
 def _ensure_clue_message(
     messages: list[TranscriptMessage | None],
-    clue_indexes: dict[tuple[int, int], int],
+    clue_indexes: dict[int, int],
     round_id: str,
     attempt_no: int,
-    repair_no: int,
 ) -> TranscriptMessage:
-    clue_key = (attempt_no, repair_no)
-    clue_message = _lookup_message(messages, clue_indexes, clue_key)
+    clue_message = _lookup_message(messages, clue_indexes, attempt_no)
     if clue_message is not None:
         return clue_message
-    clue_indexes[clue_key] = len(messages)
+    clue_indexes[attempt_no] = len(messages)
     clue_message = TranscriptMessage(
         role="cluer",
-        label=_cluer_label(attempt_no, repair_no),
+        label=_cluer_label(attempt_no),
         public_text="",
         tone="pending",
         alignment="left",
-        message_id=f"{round_id}:clue:{attempt_no}:{repair_no}",
+        message_id=f"{round_id}:clue:{attempt_no}",
     )
     messages.append(clue_message)
     return clue_message
@@ -538,23 +585,21 @@ def _ensure_clue_message(
 
 def _ensure_clue_judge_message(
     messages: list[TranscriptMessage | None],
-    judge_indexes: dict[tuple[int, int], int],
+    judge_indexes: dict[int, int],
     round_id: str,
     attempt_no: int,
-    repair_no: int,
 ) -> TranscriptMessage:
-    clue_key = (attempt_no, repair_no)
-    judge_message = _lookup_message(messages, judge_indexes, clue_key)
+    judge_message = _lookup_message(messages, judge_indexes, attempt_no)
     if judge_message is not None:
         return judge_message
-    judge_indexes[clue_key] = len(messages)
+    judge_indexes[attempt_no] = len(messages)
     judge_message = TranscriptMessage(
         role="judge",
         label="Judge",
         public_text="",
         tone="judge",
         alignment="center",
-        message_id=f"{round_id}:judge-review:{attempt_no}:{repair_no}",
+        message_id=f"{round_id}:judge-review:{attempt_no}",
     )
     messages.append(judge_message)
     return judge_message
@@ -622,7 +667,22 @@ def _set_prompt_metadata(message: TranscriptMessage, event: dict[str, Any]) -> N
 
 
 def _should_render_message(message: TranscriptMessage) -> bool:
-    return message.tone == "meta" or bool(message.public_text.strip()) or bool(message.status_label)
+    if message.tone == "meta":
+        return True
+    if not message.is_public_turn:
+        return False
+    return bool(message.public_text.strip()) or bool(message.status_label)
+
+
+def _append_timeline(message: TranscriptMessage, step: str | None) -> None:
+    if step is None:
+        return
+    text = step.strip()
+    if not text:
+        return
+    if message.debug_timeline and message.debug_timeline[-1] == text:
+        return
+    message.debug_timeline.append(text)
 
 
 def _set_debug_section(
@@ -673,10 +733,8 @@ def _raw_artifact(label: str, value: str | None) -> BubbleRawArtifact | None:
     return BubbleRawArtifact(label=label, value=text)
 
 
-def _cluer_label(attempt_no: int, repair_no: int) -> str:
-    if repair_no <= 1:
-        return f"Cluer - attempt {attempt_no}"
-    return f"Cluer - repair {repair_no}"
+def _cluer_label(attempt_no: int) -> str:
+    return f"Cluer - attempt {attempt_no}"
 
 
 def _cluer_status(event_type: str, repair_no: int) -> str:
@@ -747,13 +805,9 @@ def _guess_judge_public_text(event: dict[str, Any]) -> str:
     return "Incorrect guess confirmed."
 
 
-def _safe_cluer_public_text(value: str | None) -> str:
-    return value or "Cluer failed to produce an acceptable clue."
-
-
 def _guess_public_text(event: dict[str, Any]) -> str:
-    guess_text = _optional_text(event.get("guess_text_raw"))
-    if not guess_text or guess_text == "(no valid guess)":
+    guess_text = _optional_text(event.get("visible_guess_text"))
+    if not guess_text:
         return "Guesser failed to produce a usable guess."
     return guess_text
 

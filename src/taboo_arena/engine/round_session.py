@@ -39,6 +39,7 @@ from taboo_arena.prompts.schemas import CluerRepairFeedbackPayload, GuesserCandi
 from taboo_arena.utils.ids import new_round_id
 from taboo_arena.utils.json_utils import extract_first_json_object
 from taboo_arena.utils.normalization import dedupe_preserve_order, normalize_text
+from taboo_arena.utils.structured_payloads import looks_like_structured_payload
 
 
 class RoundPhase(StrEnum):
@@ -364,6 +365,7 @@ class RoundStepper:
             clue_candidate_angles=[item.angle for item in parsed_candidates],
             clue_candidate_clues=[item.clue for item in parsed_candidates],
             clue_candidate_parse_mode=parse_mode,
+            raw_model_output="" if parse_mode == "json" else clue_response.text,
             prompt_template_id=clue_response.prompt_template_id,
             role="cluer",
             state="hard_filtering_clue_candidates",
@@ -410,6 +412,10 @@ class RoundStepper:
                 allowed_angles=allowed_angles,
                 blocked_angles=blocked_now,
             )
+            if parse_mode != "json":
+                state.last_repair_feedback.reason_codes = dedupe_preserve_order(
+                    [*state.last_repair_feedback.reason_codes, parse_mode]
+                )
             self.logger.emit(
                 "clue_internal_retry_requested",
                 batch_id=state.batch_id,
@@ -465,6 +471,7 @@ class RoundStepper:
             clue_repair_no=state.repair_no,
             clue_internal_cycle_no=state.clue_internal_cycle_no,
             selected_angle=selected_candidate.angle.value,
+            visible_clue_text=selected_candidate.clue_text_raw,
             clue_text_raw=selected_candidate.clue_text_raw,
             clue_text_normalized=selected_candidate.clue_text_normalized,
             candidate_score=selected_candidate.score,
@@ -486,6 +493,7 @@ class RoundStepper:
             latency_ms=clue_response.latency_ms,
             prompt_tokens=clue_response.prompt_tokens,
             completion_tokens=clue_response.completion_tokens,
+            visible_clue_text=selected_candidate.clue_text_raw,
             clue_text_raw=selected_candidate.clue_text_raw,
             clue_text_normalized=selected_candidate.clue_text_normalized,
             selected_angle=selected_candidate.angle.value,
@@ -506,6 +514,7 @@ class RoundStepper:
             attempt_no=state.attempt_no,
             clue_repair_no=state.repair_no,
             clue_internal_cycle_no=state.clue_internal_cycle_no,
+            visible_clue_text=selected_candidate.clue_text_raw,
             clue_text_raw=selected_candidate.clue_text_raw,
             clue_text_normalized=selected_candidate.clue_text_normalized,
             logical_verdict=logical_result.verdict,
@@ -625,6 +634,7 @@ class RoundStepper:
                 attempt_no=state.attempt_no,
                 clue_repair_no=state.repair_no,
                 clue_internal_cycle_no=state.clue_internal_cycle_no,
+                visible_clue_text=accepted_clue,
                 clue_text_raw=accepted_clue,
                 selected_angle=state.current_selected_angle,
                 judge_warning_flags=list(state.judge_warning_flags),
@@ -784,6 +794,7 @@ class RoundStepper:
                     for item in evaluations
                 ],
                 guess_parse_mode=parse_mode,
+                raw_model_output="" if parse_mode == "json" else guess_response.text,
                 latency_ms=guess_response.latency_ms,
                 prompt_tokens=guess_response.prompt_tokens,
                 completion_tokens=guess_response.completion_tokens,
@@ -807,6 +818,11 @@ class RoundStepper:
             if hidden_retry_no >= state.settings.guesser_hidden_retry_budget:
                 hidden_retry_count = hidden_retry_no
                 break
+            hidden_retry_reasons = dedupe_preserve_order(
+                [item.invalid_reason or "no_valid_guess" for item in evaluations]
+            )
+            if parse_mode != "json":
+                hidden_retry_reasons = dedupe_preserve_order([*hidden_retry_reasons, parse_mode])
             self.logger.emit(
                 "guess_hidden_retry_requested",
                 batch_id=state.batch_id,
@@ -815,9 +831,7 @@ class RoundStepper:
                 attempt_no=state.attempt_no,
                 guess_hidden_retry_no=hidden_retry_no + 1,
                 guess_internal_cycle_no=state.guess_internal_cycle_no,
-                reason_codes=dedupe_preserve_order(
-                    [item.invalid_reason or "no_valid_guess" for item in evaluations]
-                ),
+                reason_codes=hidden_retry_reasons,
                 state="generating_guess",
                 cluer_model_id=state.cluer_entry.id,
                 guesser_model_id=state.guesser_entry.id,
@@ -884,6 +898,7 @@ class RoundStepper:
         guess_judge_disagreement = bool(guess_judge_result.correct) != final_guess_correct
         state.current_selected_guess_candidate = selected_guess_text_raw
         state.current_guess_match_status = str(selected_match_result.status)
+        visible_guess_text = "" if selected_guess_text_raw == "(no valid guess)" else selected_guess_text_raw
         self.logger.emit(
             "guess_validation_completed",
             batch_id=state.batch_id,
@@ -894,6 +909,7 @@ class RoundStepper:
             latency_ms=guess_judge_latency_ms,
             prompt_tokens=guess_judge_prompt_tokens,
             completion_tokens=guess_judge_completion_tokens,
+            visible_guess_text=visible_guess_text,
             guess_text_raw=selected_guess_text_raw,
             guess_match_status=str(selected_match_result.status),
             guess_match_reason=selected_match_result.reason,
@@ -940,6 +956,7 @@ class RoundStepper:
             latency_ms=total_guess_latency_ms,
             prompt_tokens=total_prompt_tokens,
             completion_tokens=total_completion_tokens,
+            visible_guess_text=visible_guess_text,
             guess_text_raw=selected_guess_text_raw,
             guess_text_normalized=guess_normalized,
             guess_match_status=str(selected_match_result.status),
@@ -1083,7 +1100,7 @@ def _cluer_banned_phrases(*, card: CardRecord, rejected_clues: list[str]) -> lis
 
 
 def _parse_guesser_candidates(text: str) -> tuple[list[str], str]:
-    """Parse strict JSON shortlist output, with a raw-text fallback for compatibility."""
+    """Parse strict JSON shortlist output without promoting raw fallback text."""
     try:
         payload = extract_first_json_object(text)
         structured = GuesserCandidatesPayload.model_validate(payload)
@@ -1091,9 +1108,8 @@ def _parse_guesser_candidates(text: str) -> tuple[list[str], str]:
         if guesses:
             return guesses, "json"
     except (ValueError, ValidationError):
-        pass
-    fallback = _extract_single_line(text)
-    return ([fallback] if fallback else []), "raw_fallback"
+        return [], "parse_failure"
+    return [], "structured_payload_rejected" if looks_like_structured_payload(text) else "unstructured_output"
 
 
 def _latest_prompt_fields(logger: RunLogger, role: str) -> dict[str, str]:

@@ -41,9 +41,11 @@ class _FakeBackend:
         generation_params: GenerationParams,
         stop_tokens: list[str],
         prompt_template_id: str,
+        add_special_tokens: bool = True,
         banned_phrases: list[str] | None = None,
         compiled_constraints: CompiledConstraints | None = None,
     ) -> GenerationResponse:
+        self.last_add_special_tokens = add_special_tokens
         self.last_banned_phrases = list(banned_phrases or [])
         self.last_compiled_constraints = compiled_constraints
         return GenerationResponse(

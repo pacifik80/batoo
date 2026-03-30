@@ -261,6 +261,7 @@ class ModelManager:
             messages,
             supports_system_prompt=model_entry.supports_system_prompt,
             stop_tokens=model_entry.stop_tokens,
+            tokenizer=getattr(backend, "tokenizer", None),
         )
         if self.logger is not None and hasattr(self.logger, "trace_prompt"):
             self.logger.trace_prompt(
@@ -282,6 +283,7 @@ class ModelManager:
             generation_params=generation_params,
             stop_tokens=rendered.stop_tokens,
             prompt_template_id=rendered.prompt_template_id,
+            add_special_tokens=rendered.add_special_tokens,
             banned_phrases=banned_phrases,
             compiled_constraints=compiled_constraints,
         )

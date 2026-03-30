@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -44,6 +45,21 @@ def _entry(
     )
 
 
+def _cluer_candidates(*candidates: tuple[str, str]) -> str:
+    return json.dumps(
+        {
+            "candidates": [
+                {"angle": angle, "clue": clue}
+                for angle, clue in candidates
+            ]
+        }
+    )
+
+
+def _guesser_candidates(*guesses: str) -> str:
+    return json.dumps({"guesses": list(guesses)})
+
+
 class _Registry:
     def __init__(self, entries: list[ModelEntry]) -> None:
         self._entries = {entry.id: entry for entry in entries}
@@ -54,9 +70,12 @@ class _Registry:
 
 def test_round_stepper_matches_round_engine_behavior(sample_card, tmp_path: Path) -> None:
     responses = {
-        "cluer": ["Bear clue", "forest giant"],
+        "cluer": [
+            _cluer_candidates(("type", "Bear clue")),
+            _cluer_candidates(("use", "forest giant")),
+        ],
         "judge": [CLUE_ALLOW, GUESS_CORRECT],
-        "guesser": ["Bear"],
+        "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
     }
 
     engine_logger = RunLogger(log_root=tmp_path / "engine", console_trace=False)
@@ -98,9 +117,9 @@ def test_live_round_adapter_delegates_to_canonical_stepper(sample_card, tmp_path
     logger = RunLogger(log_root=tmp_path, console_trace=False)
     manager = FakeModelManager(
         responses={
-            "cluer": ["forest giant"],
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
             "judge": [CLUE_ALLOW, GUESS_CORRECT],
-            "guesser": ["Bear"],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
         }
     )
     controller = start_live_round(

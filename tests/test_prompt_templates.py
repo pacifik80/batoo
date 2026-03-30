@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from taboo_arena.prompts.store import render_prompt_messages
-from taboo_arena.prompts.templates import render_prompt
+from taboo_arena.prompts.templates import PromptMessage, render_prompt
 
 
 def test_mistral_render_preserves_single_integrated_instruction() -> None:
@@ -35,3 +35,42 @@ def test_mistral_render_preserves_single_integrated_instruction() -> None:
     assert "Target: Bear." in rendered.prompt
     assert "Allowed angles" in rendered.prompt
     assert rendered.prompt != "[INST] [/INST]"
+
+
+def test_phi_fallback_render_includes_end_delimiters() -> None:
+    rendered = render_prompt(
+        "phi_chat",
+        [
+            PromptMessage(role="user", content="hello"),
+        ],
+        supports_system_prompt=True,
+        stop_tokens=[],
+    )
+
+    assert rendered.prompt == "<|user|>hello<|end|><|assistant|>"
+    assert rendered.add_special_tokens is True
+
+
+def test_render_prompt_prefers_tokenizer_chat_template_when_available() -> None:
+    calls: list[object] = []
+
+    class FakeTokenizer:
+        def apply_chat_template(self, messages, *, tokenize, add_generation_prompt):
+            calls.append(messages)
+            assert tokenize is False
+            assert add_generation_prompt is True
+            return "<tokenizer-template>"
+
+    rendered = render_prompt(
+        "phi_chat",
+        [
+            PromptMessage(role="user", content="hello"),
+        ],
+        supports_system_prompt=True,
+        stop_tokens=["<|end|>"],
+        tokenizer=FakeTokenizer(),
+    )
+
+    assert calls == [[{"role": "user", "content": "hello"}]]
+    assert rendered.prompt == "<tokenizer-template>"
+    assert rendered.add_special_tokens is False

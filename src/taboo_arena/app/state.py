@@ -6,7 +6,7 @@ import random
 from typing import Any, cast
 
 from taboo_arena.cards.dataset import LOCAL_BUNDLED_DATASET_DIR, LOCAL_BUNDLED_SOURCE_REF
-from taboo_arena.config import AppSettings, GenerationParams, RoleName
+from taboo_arena.config import AppSettings, GenerationParams, RoleGenerationSettings, RoleName
 from taboo_arena.models.registry import ModelEntry
 
 ROLE_NAMES: tuple[RoleName, ...] = ("cluer", "guesser", "judge")
@@ -14,6 +14,26 @@ ROLE_TOKEN_FLOORS: dict[RoleName, int] = {
     "cluer": 256,
     "guesser": 128,
     "judge": 384,
+}
+DEFAULT_TARGET_VRAM_GB = 12.0
+ROLE_GENERATION_FALLBACKS = RoleGenerationSettings()
+RECOMMENDED_TEMPERATURES: dict[str, dict[RoleName, float]] = {
+    "compact": {"cluer": 0.28, "guesser": 0.14, "judge": 0.04},
+    "balanced": {"cluer": 0.34, "guesser": 0.16, "judge": 0.05},
+    "full": {"cluer": 0.40, "guesser": 0.18, "judge": 0.07},
+    "overflow": {"cluer": 0.38, "guesser": 0.17, "judge": 0.06},
+}
+RECOMMENDED_TOP_P: dict[str, dict[RoleName, float]] = {
+    "compact": {"cluer": 0.82, "guesser": 0.72, "judge": 0.62},
+    "balanced": {"cluer": 0.86, "guesser": 0.76, "judge": 0.66},
+    "full": {"cluer": 0.90, "guesser": 0.80, "judge": 0.70},
+    "overflow": {"cluer": 0.88, "guesser": 0.78, "judge": 0.68},
+}
+RECOMMENDED_MAX_TOKENS: dict[str, dict[RoleName, int]] = {
+    "compact": {"cluer": 640, "guesser": 384, "judge": 512},
+    "balanced": {"cluer": 512, "guesser": 320, "judge": 448},
+    "full": {"cluer": 448, "guesser": 288, "judge": 384},
+    "overflow": {"cluer": 384, "guesser": 256, "judge": 384},
 }
 
 
@@ -135,6 +155,7 @@ def sync_selected_model_generation_defaults(
     selected_models: dict[str, ModelEntry],
     *,
     force: bool = False,
+    target_vram_gb: float | None = None,
 ) -> dict[str, str]:
     """Apply selected-model generation defaults, always resyncing when the model changes."""
     applied: dict[str, str] = {}
@@ -142,7 +163,7 @@ def sync_selected_model_generation_defaults(
         role = cast(RoleName, role_name)
         source_key = f"{role}_generation_source_model_id"
         dirty_key = f"{role}_generation_dirty"
-        recommended = recommended_generation_defaults(role, entry)
+        recommended = recommended_generation_defaults(role, entry, target_vram_gb=target_vram_gb)
         current_values = applied_generation_params(state, role)
         current_matches = generation_params_match(current_values, recommended)
         should_apply = force or state.get(source_key) is None or state.get(source_key) != entry.id or (
@@ -164,12 +185,18 @@ def mark_generation_dirty(state: Any, role: RoleName) -> None:
     state[f"{role}_generation_dirty"] = True
 
 
-def generation_status_text(state: Any, role: RoleName, entry: ModelEntry) -> str:
+def generation_status_text(
+    state: Any,
+    role: RoleName,
+    entry: ModelEntry,
+    *,
+    target_vram_gb: float | None = None,
+) -> str:
     """Describe whether the role uses registry defaults or custom overrides."""
     source_model_id = state.get(f"{role}_generation_source_model_id")
     dirty = bool(state.get(f"{role}_generation_dirty", False))
     current_values = applied_generation_params(state, role)
-    recommended = recommended_generation_defaults(role, entry)
+    recommended = recommended_generation_defaults(role, entry, target_vram_gb=target_vram_gb)
     matches_recommended = generation_params_match(current_values, recommended)
 
     if source_model_id == entry.id and matches_recommended:
@@ -181,22 +208,33 @@ def generation_status_text(state: Any, role: RoleName, entry: ModelEntry) -> str
     return "Applied values differ from the recommendation. Click 'Use recommended defaults' to resync."
 
 
-def recommended_generation_defaults(role: RoleName, entry: ModelEntry) -> GenerationParams:
-    """Return practical role-aware defaults for the selected model."""
+def recommended_generation_defaults(
+    role: RoleName,
+    entry: ModelEntry,
+    *,
+    target_vram_gb: float | None = None,
+) -> GenerationParams:
+    """Return practical role-aware defaults tuned for local Taboo play."""
     defaults = entry.default_generation_params
-    return defaults.model_copy(
-        update={
-            "max_tokens": max(int(defaults.max_tokens), ROLE_TOKEN_FLOORS[role]),
-        }
+    size_tier = _recommendation_size_tier(entry, target_vram_gb=target_vram_gb)
+    return GenerationParams(
+        temperature=RECOMMENDED_TEMPERATURES[size_tier][role],
+        top_p=RECOMMENDED_TOP_P[size_tier][role],
+        max_tokens=max(
+            int(defaults.max_tokens),
+            ROLE_TOKEN_FLOORS[role],
+            RECOMMENDED_MAX_TOKENS[size_tier][role],
+        ),
     )
 
 
 def applied_generation_params(state: Any, role: RoleName) -> GenerationParams:
     """Return the currently applied generation settings for one role from session state."""
+    fallback = getattr(ROLE_GENERATION_FALLBACKS, role)
     return GenerationParams(
-        temperature=float(state.get(f"{role}_temperature", 0.0)),
-        top_p=float(state.get(f"{role}_top_p", 0.1)),
-        max_tokens=int(state.get(f"{role}_max_tokens", 16)),
+        temperature=float(state.get(f"{role}_temperature", fallback.temperature)),
+        top_p=float(state.get(f"{role}_top_p", fallback.top_p)),
+        max_tokens=int(state.get(f"{role}_max_tokens", fallback.max_tokens)),
     )
 
 
@@ -207,6 +245,46 @@ def generation_params_match(left: GenerationParams, right: GenerationParams) -> 
         and abs(float(left.top_p) - float(right.top_p)) < 1e-9
         and int(left.max_tokens) == int(right.max_tokens)
     )
+
+
+def generation_widget_key(role: RoleName, field_name: str) -> str:
+    """Return the transient widget key used for generation controls."""
+    return f"{role}_{field_name}_input_widget"
+
+
+def sync_generation_widget_state(state: Any, role: RoleName) -> None:
+    """Mirror persisted generation settings into ephemeral widget keys."""
+    applied = applied_generation_params(state, role)
+    state[generation_widget_key(role, "temperature")] = float(applied.temperature)
+    state[generation_widget_key(role, "top_p")] = float(applied.top_p)
+    state[generation_widget_key(role, "max_tokens")] = int(applied.max_tokens)
+
+
+def apply_generation_widget_state(state: Any, role: RoleName) -> None:
+    """Commit widget-edited generation values back to the persisted app state."""
+    fallback = applied_generation_params(state, role)
+    state[f"{role}_temperature"] = float(
+        state.get(generation_widget_key(role, "temperature"), fallback.temperature)
+    )
+    state[f"{role}_top_p"] = float(state.get(generation_widget_key(role, "top_p"), fallback.top_p))
+    state[f"{role}_max_tokens"] = int(
+        state.get(generation_widget_key(role, "max_tokens"), fallback.max_tokens)
+    )
+    mark_generation_dirty(state, role)
+
+
+def _recommendation_size_tier(entry: ModelEntry, *, target_vram_gb: float | None = None) -> str:
+    """Map a model estimate to a practical local-VRAM recommendation tier."""
+    effective_target = float(target_vram_gb or DEFAULT_TARGET_VRAM_GB)
+    estimated_vram_gb = float(entry.estimated_vram_gb or effective_target * 0.65)
+    usage_ratio = estimated_vram_gb / max(effective_target, 0.1)
+    if usage_ratio <= 0.40:
+        return "compact"
+    if usage_ratio <= 0.75:
+        return "balanced"
+    if usage_ratio <= 1.00:
+        return "full"
+    return "overflow"
 
 
 def prepare_category_selection(state: Any, categories: list[str]) -> list[str]:

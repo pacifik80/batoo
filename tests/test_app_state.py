@@ -4,12 +4,15 @@ import random
 
 from taboo_arena.app.state import (
     applied_generation_params,
+    apply_generation_widget_state,
     choose_default_model_id,
     generation_status_text,
+    generation_widget_key,
     initialize_session_state,
     mark_generation_dirty,
     prepare_category_selection,
     recommended_generation_defaults,
+    sync_generation_widget_state,
     sync_selected_model_generation_defaults,
 )
 from taboo_arena.config import AppSettings, GenerationParams
@@ -75,7 +78,7 @@ def test_sync_selected_model_generation_defaults_resets_to_new_model_defaults_on
         state,
         {"cluer": first_entry, "guesser": first_entry, "judge": first_entry},
     )
-    assert state["cluer_max_tokens"] == 256
+    assert state["cluer_max_tokens"] == 640
     assert "recommended cluer defaults" in generation_status_text(state, "cluer", first_entry)
 
     state["cluer_max_tokens"] = 777
@@ -85,7 +88,7 @@ def test_sync_selected_model_generation_defaults_resets_to_new_model_defaults_on
         {"cluer": second_entry, "guesser": second_entry, "judge": second_entry},
     )
 
-    assert state["cluer_max_tokens"] == 256
+    assert state["cluer_max_tokens"] == 512
     assert "matches the recommended cluer defaults" in generation_status_text(
         state,
         "cluer",
@@ -98,7 +101,7 @@ def test_sync_selected_model_generation_defaults_resets_to_new_model_defaults_on
         force=True,
     )
 
-    assert state["cluer_max_tokens"] == 256
+    assert state["cluer_max_tokens"] == 512
     assert state["cluer_generation_dirty"] is False
 
 
@@ -128,9 +131,43 @@ def test_generation_status_text_reports_actual_applied_values() -> None:
 def test_recommended_generation_defaults_apply_role_token_floors() -> None:
     entry = _entry("model-a", estimated_vram_gb=4.0, max_tokens=160)
 
-    assert recommended_generation_defaults("cluer", entry).max_tokens == 256
-    assert recommended_generation_defaults("guesser", entry).max_tokens == 160
-    assert recommended_generation_defaults("judge", entry).max_tokens == 384
+    assert recommended_generation_defaults("cluer", entry).max_tokens == 640
+    assert recommended_generation_defaults("guesser", entry).max_tokens == 384
+    assert recommended_generation_defaults("judge", entry).max_tokens == 512
+
+
+def test_recommended_generation_defaults_scale_down_when_model_exceeds_target_vram() -> None:
+    entry = _entry("model-a", estimated_vram_gb=16.0, max_tokens=160)
+
+    assert recommended_generation_defaults("cluer", entry, target_vram_gb=12.0).max_tokens == 384
+    assert recommended_generation_defaults("guesser", entry, target_vram_gb=12.0).max_tokens == 256
+    assert recommended_generation_defaults("judge", entry, target_vram_gb=12.0).max_tokens == 384
+
+
+def test_generation_widget_state_roundtrips_without_using_persisted_keys_as_widgets() -> None:
+    state: dict[str, object] = {}
+    initialize_session_state(state, AppSettings())
+
+    state["cluer_temperature"] = 0.34
+    state["cluer_top_p"] = 0.86
+    state["cluer_max_tokens"] = 512
+
+    sync_generation_widget_state(state, "cluer")
+
+    assert state[generation_widget_key("cluer", "temperature")] == 0.34
+    assert state[generation_widget_key("cluer", "top_p")] == 0.86
+    assert state[generation_widget_key("cluer", "max_tokens")] == 512
+
+    state[generation_widget_key("cluer", "temperature")] = 0.45
+    state[generation_widget_key("cluer", "top_p")] = 0.92
+    state[generation_widget_key("cluer", "max_tokens")] = 640
+
+    apply_generation_widget_state(state, "cluer")
+
+    assert state["cluer_temperature"] == 0.45
+    assert state["cluer_top_p"] == 0.92
+    assert state["cluer_max_tokens"] == 640
+    assert state["cluer_generation_dirty"] is True
 
 
 def test_prepare_category_selection_initializes_and_filters() -> None:

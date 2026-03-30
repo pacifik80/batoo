@@ -41,6 +41,7 @@ class FakeModelManager:
                 {
                     "model_id": model_entry.id,
                     "trace_role": trace_role,
+                    "messages": list(messages),
                     "banned_phrases": list(banned_phrases or []),
                 }
             )

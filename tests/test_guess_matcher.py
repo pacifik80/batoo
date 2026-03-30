@@ -36,3 +36,16 @@ def test_guess_shortlist_filters_wrapper_repeats_but_keeps_new_target_candidate(
     assert evaluations[1].invalid_reason == "repeat_previous_wrong_guess"
     assert evaluations[2].is_valid_visible_candidate is True
     assert evaluations[2].match_result.status is GuessMatchStatus.CORRECT_MULTI_CANDIDATE
+
+
+def test_guess_shortlist_rejects_structured_payload_candidates() -> None:
+    matcher = GuessCanonicalizer()
+    evaluations = matcher.evaluate_shortlist(
+        ['{"guesses":["table","desk","chair"]}', "table"],
+        target="table",
+        previous_wrong_guesses=[],
+    )
+
+    assert evaluations[0].invalid_reason == "structured_payload_guess"
+    assert evaluations[0].match_result.reason == "structured_payload_detected"
+    assert evaluations[1].is_valid_visible_candidate is True

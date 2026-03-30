@@ -17,6 +17,7 @@ from taboo_arena.prompts.schemas import (
 )
 from taboo_arena.utils.json_utils import extract_first_json_object
 from taboo_arena.utils.normalization import dedupe_preserve_order, normalize_text, tokenize
+from taboo_arena.utils.structured_payloads import looks_like_structured_payload
 
 
 class ClueAngle(StrEnum):
@@ -73,7 +74,7 @@ def parse_cluer_candidates(
     *,
     allowed_angles: list[ClueAngle],
 ) -> tuple[list[CluerCandidatePayload], str]:
-    """Parse strict JSON clue candidates, with a raw fallback for compatibility."""
+    """Parse strict JSON clue candidates without promoting raw fallback text."""
     allowed_values = {angle.value for angle in allowed_angles}
     try:
         payload = extract_first_json_object(text)
@@ -95,14 +96,9 @@ def parse_cluer_candidates(
         if filtered:
             return filtered, "json"
     except (ValueError, ValidationError):
-        pass
+        return [], "parse_failure"
 
-    fallback_text = text.strip().splitlines()[0].strip() if text.strip() else ""
-    if not fallback_text or not allowed_angles:
-        return [], "raw_fallback"
-    return [
-        CluerCandidatePayload(angle=allowed_angles[0].value, clue=fallback_text)
-    ], "raw_fallback"
+    return [], "structured_payload_rejected" if looks_like_structured_payload(text) else "unstructured_output"
 
 
 def evaluate_clue_candidates(
@@ -118,6 +114,24 @@ def evaluate_clue_candidates(
     evaluations: list[ClueCandidateEvaluation] = []
     used = {item for item in used_angles if item}
     for candidate in candidates:
+        if looks_like_structured_payload(candidate.clue):
+            logical_result = LogicalValidationResult(
+                verdict="fail",
+                normalized_text=normalize_text(candidate.clue),
+                violations=["structured_payload_detected"],
+                matched_terms=[],
+            )
+            evaluations.append(
+                ClueCandidateEvaluation(
+                    angle=ClueAngle(candidate.angle),
+                    clue_text_raw=candidate.clue,
+                    clue_text_normalized=logical_result.normalized_text,
+                    logical_result=logical_result,
+                    score=-1000,
+                    warnings=[],
+                )
+            )
+            continue
         logical_result = validator.validate(
             candidate.clue,
             card=card,
