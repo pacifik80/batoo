@@ -37,6 +37,11 @@ def get_log_dir() -> Path:
     return get_app_dir() / "logs"
 
 
+def get_ui_preferences_path() -> Path:
+    """Return the persisted Streamlit UI preferences path."""
+    return get_app_dir() / "ui_preferences.yaml"
+
+
 def get_custom_model_store_path() -> Path:
     """Return the persisted custom model registry path."""
     return get_model_dir() / "custom_models.json"
@@ -46,4 +51,3 @@ def ensure_app_dirs() -> None:
     """Create the standard application directories if they are missing."""
     for path in [get_app_dir(), get_dataset_dir(), get_model_dir(), get_log_dir()]:
         path.mkdir(parents=True, exist_ok=True)
-

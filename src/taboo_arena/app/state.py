@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any, cast
 
+from taboo_arena.app.preferences import PersistedAppPreferences
 from taboo_arena.cards.dataset import LOCAL_BUNDLED_DATASET_DIR, LOCAL_BUNDLED_SOURCE_REF
 from taboo_arena.config import AppSettings, GenerationParams, RoleGenerationSettings, RoleName
 from taboo_arena.models.registry import ModelEntry
@@ -37,13 +38,16 @@ RECOMMENDED_MAX_TOKENS: dict[str, dict[RoleName, int]] = {
 }
 
 
-def initialize_session_state(state: Any, settings: AppSettings) -> None:
+def initialize_session_state(
+    state: Any,
+    settings: AppSettings,
+    preferences: PersistedAppPreferences | None = None,
+) -> None:
     """Seed Streamlit session state with stable defaults."""
-    if "random_seed" not in state:
-        state["random_seed"] = random.SystemRandom().randint(1, 2_147_483_647)
+    persisted = preferences or PersistedAppPreferences.from_settings(settings)
 
     defaults: dict[str, Any] = {
-        "show_gated_models": False,
+        "show_gated_models": persisted.show_gated_models,
         "current_state": "idle",
         "current_logger": None,
         "current_result": None,
@@ -53,9 +57,8 @@ def initialize_session_state(state: Any, settings: AppSettings) -> None:
         "selected_card_id": None,
         "stop_requested": False,
         "start_round_clicked": False,
-        "start_batch_clicked": False,
+        "start_benchmark_clicked": False,
         "active_job": None,
-        "batch_job": None,
         "selected_categories": [],
         "selected_categories_initialized": False,
         "resource_history": [],
@@ -63,45 +66,53 @@ def initialize_session_state(state: Any, settings: AppSettings) -> None:
         "transcript_history_events": [],
         "transcript_history_run_ids": [],
         "session_history_round_summaries": [],
-        "source_ref": settings.dataset.source_ref,
-        "language": settings.dataset.language,
-        "max_guess_attempts": settings.run.max_guess_attempts,
-        "max_clue_repairs": settings.run.max_clue_repairs,
-        "block_on_uncertain": settings.run.block_on_uncertain,
-        "random_seed": int(state["random_seed"]),
-        "device_preference": settings.run.device_preference,
-        "show_hidden_repairs": settings.run.show_hidden_repairs,
-        "allow_same_model_for_multiple_roles": settings.run.allow_same_model_for_multiple_roles,
-        "debug_show_target": settings.run.debug_show_target,
-        "console_trace": settings.run.console_trace,
-        "log_dir": str(settings.run.log_dir),
-        "memory_policy": settings.run.memory_policy,
-        "validator_min_token_count": settings.run.logical_validator.min_token_count,
-        "validator_check_substring": settings.run.logical_validator.check_substring,
-        "validator_check_token_match": settings.run.logical_validator.check_token_match,
-        "validator_check_whole_word": settings.run.logical_validator.check_whole_word,
-        "validator_check_stemming": settings.run.logical_validator.check_stemming,
-        "validator_check_similarity": settings.run.logical_validator.check_similarity_to_previous,
-        "validator_similarity_threshold": settings.run.logical_validator.similarity_threshold,
-        "cluer_temperature": settings.run.generation.cluer.temperature,
-        "cluer_top_p": settings.run.generation.cluer.top_p,
-        "cluer_max_tokens": settings.run.generation.cluer.max_tokens,
-        "guesser_temperature": settings.run.generation.guesser.temperature,
-        "guesser_top_p": settings.run.generation.guesser.top_p,
-        "guesser_max_tokens": settings.run.generation.guesser.max_tokens,
-        "judge_temperature": settings.run.generation.judge.temperature,
-        "judge_top_p": settings.run.generation.judge.top_p,
-        "judge_max_tokens": settings.run.generation.judge.max_tokens,
-        "batch_sample_size": 5,
-        "batch_repeats_per_card": 1,
-        "batch_cluer_ids": [],
-        "batch_guesser_ids": [],
-        "batch_judge_ids": [],
-        "batch_fixed_card_ids": [],
+        "benchmark_running": False,
+        "benchmark_plan": None,
+        "benchmark_progress": None,
+        "benchmark_summary": None,
+        "benchmark_error": None,
+        "benchmark_card_selection_mode": persisted.benchmark_card_selection_mode,
+        "benchmark_sample_size": persisted.benchmark_sample_size,
+        "source_ref": persisted.source_ref,
+        "language": persisted.language,
+        "max_guess_attempts": persisted.max_guess_attempts,
+        "max_clue_repairs": persisted.max_clue_repairs,
+        "guesser_hidden_retry_budget": persisted.guesser_hidden_retry_budget,
+        "block_on_uncertain": persisted.block_on_uncertain,
+        "random_seed": int(persisted.random_seed),
+        "device_preference": persisted.device_preference,
+        "show_hidden_repairs": persisted.show_hidden_repairs,
+        "allow_same_model_for_multiple_roles": persisted.allow_same_model_for_multiple_roles,
+        "debug_show_target": persisted.debug_show_target,
+        "console_trace": persisted.console_trace,
+        "log_dir": str(persisted.log_dir),
+        "memory_policy": persisted.memory_policy,
+        "validator_min_token_count": persisted.validator_min_token_count,
+        "validator_check_substring": persisted.validator_check_substring,
+        "validator_check_token_match": persisted.validator_check_token_match,
+        "validator_check_whole_word": persisted.validator_check_whole_word,
+        "validator_check_stemming": persisted.validator_check_stemming,
+        "validator_check_similarity": persisted.validator_check_similarity,
+        "validator_similarity_threshold": persisted.validator_similarity_threshold,
+        "cluer_temperature": persisted.cluer_temperature,
+        "cluer_top_p": persisted.cluer_top_p,
+        "cluer_max_tokens": persisted.cluer_max_tokens,
+        "guesser_temperature": persisted.guesser_temperature,
+        "guesser_top_p": persisted.guesser_top_p,
+        "guesser_max_tokens": persisted.guesser_max_tokens,
+        "judge_temperature": persisted.judge_temperature,
+        "judge_top_p": persisted.judge_top_p,
+        "judge_max_tokens": persisted.judge_max_tokens,
+        "cluer_model_id": persisted.cluer_model_id,
+        "guesser_model_id": persisted.guesser_model_id,
+        "judge_model_id": persisted.judge_model_id,
     }
     for role in ROLE_NAMES:
-        defaults[f"{role}_generation_dirty"] = False
-        defaults[f"{role}_generation_source_model_id"] = None
+        defaults[f"{role}_generation_dirty"] = bool(getattr(persisted, f"{role}_generation_dirty"))
+        defaults[f"{role}_generation_source_model_id"] = getattr(
+            persisted,
+            f"{role}_generation_source_model_id",
+        )
     for key, value in defaults.items():
         state.setdefault(key, value)
     if (
@@ -112,8 +123,10 @@ def initialize_session_state(state: Any, settings: AppSettings) -> None:
     ):
         state["source_ref"] = LOCAL_BUNDLED_SOURCE_REF
         state["current_deck"] = None
-    if "app_randomizer" not in state:
-        state["app_randomizer"] = random.Random(int(state["random_seed"]))
+    random_seed = int(state["random_seed"])
+    if state.get("app_randomizer_seed") != random_seed or "app_randomizer" not in state:
+        state["app_randomizer"] = random.Random(random_seed)
+        state["app_randomizer_seed"] = random_seed
 
 
 def choose_default_model_id(

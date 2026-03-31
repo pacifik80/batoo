@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
+from taboo_arena.app.main import _display_card
 from taboo_arena.app.main import (
     _active_transcript_placeholder,
     _compact_prompt_preview,
@@ -41,3 +43,20 @@ def test_compact_prompt_preview_trims_and_collapses_excessive_whitespace() -> No
     )
 
     assert preview == "You are the Cluer.\n\nTarget: Alpaca.\n\nOutput only the clue."
+
+
+def test_display_card_prefers_current_benchmark_progress_card(monkeypatch) -> None:
+    cards = [
+        SimpleNamespace(id="animals:bear:0001", target="Bear"),
+        SimpleNamespace(id="science_and_nature-023", target="Gravity"),
+    ]
+    deck = SimpleNamespace(cards=cards)
+    monkeypatch.setattr(
+        "taboo_arena.app.main.st.session_state",
+        {"benchmark_progress": {"current_card_id": "science_and_nature-023"}},
+    )
+
+    card = _display_card(deck, logger=None)
+
+    assert card is not None
+    assert card.target == "Gravity"

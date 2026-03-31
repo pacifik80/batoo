@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from taboo_arena.config import RunSettings
-from taboo_arena.engine import BatchRunner, BatchSpec, RoundEngine
+from taboo_arena.engine import BatchRunner, BatchSpec, BenchmarkRunner, RoundEngine, create_benchmark_plan
 from taboo_arena.logging.run_logger import RunLogger
 from taboo_arena.models.registry import ModelEntry
 from tests.conftest import FakeModelManager
@@ -74,7 +74,7 @@ def test_round_engine_solves_after_hidden_repair(sample_card, tmp_path: Path) ->
     )
     assert result.solved is True
     assert result.total_guess_attempts_used == 1
-    assert result.total_clue_repairs == 2
+    assert result.total_clue_repairs == 1
     assert result.clue_repaired_successfully is True
     assert logger.events_path.exists()
     assert logger.rounds_csv_path.exists()
@@ -145,7 +145,7 @@ def test_round_engine_logs_internal_clue_retry_when_candidate_batch_fails(sample
     )
 
     assert result.solved is True
-    assert result.total_clue_repairs == 2
+    assert result.total_clue_repairs == 1
     retry_event = next(event for event in logger.events if event["event_type"] == "clue_internal_retry_requested")
     assert retry_event["blocked_angles"] == ["type", "use", "context"]
     assert retry_event["clue_internal_cycle_no"] == 1
@@ -240,6 +240,45 @@ def test_batch_runner_smoke(sample_card, tmp_path: Path) -> None:
     )
     assert len(results) == 1
     assert results[0].solved is True
+
+
+def test_benchmark_runner_emits_progress_without_name_errors(sample_card, tmp_path: Path) -> None:
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    manager = FakeModelManager(
+        responses={
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
+            "judge": [CLUE_ALLOW, GUESS_CORRECT],
+            "guesser": [_guesser_candidates("Bear", "Wolf", "Fox")],
+        }
+    )
+    settings = RunSettings()
+    engine = RoundEngine(model_manager=manager, logger=logger, settings=settings)
+    runner = BenchmarkRunner(engine, logger)
+    plan = create_benchmark_plan(
+        eligible_cards=[sample_card],
+        selected_categories=[str(sample_card.category_label or sample_card.source_category)],
+        cluer_model_id="cluer",
+        guesser_model_id="guesser",
+        judge_model_id="judge",
+        seed=7,
+        card_selection_mode="all_eligible",
+    )
+    seen_progress = []
+
+    summary = runner.run_plan(
+        plan=plan,
+        cards_by_id={sample_card.id: sample_card},
+        cluer_entry=_entry("cluer"),
+        guesser_entry=_entry("guesser"),
+        judge_entry=_entry("judge"),
+        progress_callback=lambda progress: seen_progress.append(progress),
+    )
+
+    assert summary.cards_played_total == 1
+    assert summary.cards_solved_total == 1
+    assert len(seen_progress) == 3
+    assert seen_progress[-1].completed_cards == 1
+    assert seen_progress[-1].card_solve_rate_so_far == 1.0
 
 
 def test_round_engine_passes_cluer_guard_phrases(sample_card, tmp_path: Path) -> None:
@@ -412,7 +451,7 @@ def test_round_engine_honors_configured_max_guess_attempts(sample_card, tmp_path
 
     assert result.solved is False
     assert result.total_guess_attempts_used == 2
-    assert result.terminal_reason == "max_guess_attempts_reached"
+    assert result.terminal_reason == "max_attempts_reached"
 
 
 def test_round_engine_hides_malformed_structured_guesser_output_until_retry(sample_card, tmp_path: Path) -> None:

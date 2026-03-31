@@ -22,7 +22,8 @@ from taboo_arena.app.bootstrap import (
     build_registry,
     load_app_settings,
 )
-from taboo_arena.app.jobs import ActiveJob, start_batch_job, start_single_round_job
+from taboo_arena.app.jobs import ActiveJob, start_benchmark_job, start_single_round_job
+from taboo_arena.app.preferences import load_app_preferences, persist_session_preferences
 from taboo_arena.app.session_facade import SessionFacade
 from taboo_arena.app.state import (
     applied_generation_params,
@@ -36,7 +37,12 @@ from taboo_arena.app.state import (
     sync_generation_widget_state,
     sync_selected_model_generation_defaults,
 )
-from taboo_arena.app.ui_stats_panel import render_live_round_pulse_inline, render_round_pulse_inline
+from taboo_arena.app.ui_stats_panel import (
+    render_benchmark_summary_inline,
+    render_live_benchmark_inline,
+    render_live_round_pulse_inline,
+    render_round_pulse_inline,
+)
 from taboo_arena.app.ui_theme import apply_theme
 from taboo_arena.app.ui_transcript_panel import (
     active_transcript_placeholder,
@@ -50,6 +56,7 @@ from taboo_arena.cards.dataset import (
     LOCAL_BUNDLED_SOURCE_REPO,
 )
 from taboo_arena.config import AppSettings, BackendName, GenerationParams, RoleName
+from taboo_arena.engine import BenchmarkPlan, create_benchmark_plan
 from taboo_arena.logging.run_logger import RunLogger
 from taboo_arena.logging.schemas import RoundSummaryRecord
 from taboo_arena.models import ModelEntry, ModelRegistry
@@ -86,6 +93,11 @@ def get_persistent_model_manager() -> ModelManager:
 
 def _active_run_present() -> bool:
     return st.session_state.active_job is not None
+
+
+def _active_benchmark_present() -> bool:
+    job = cast(ActiveJob | None, st.session_state.active_job)
+    return job is not None and job.kind == "benchmark"
 
 
 def _live_logger_events(current_logger: RunLogger) -> list[dict[str, Any]]:
@@ -128,17 +140,21 @@ def _render_live_dashboard(
         selected_models,
         target_vram_gb=target_vram_gb,
     )
-    session.start_batch_clicked = False
+    session.start_benchmark_clicked = False
     if session.current_error_message:
         st.error(str(session.current_error_message))
+    if session.benchmark_error:
+        st.error(str(session.benchmark_error))
     _render_main_body(deck, selected_models, model_manager)
+    persist_session_preferences(st.session_state, fallback_settings=settings)
     if _finalize_active_job_if_needed():
         st.rerun()
 
 
 def main() -> None:
     """Render the single-screen app."""
-    initialize_session_state(st.session_state, load_app_settings())
+    settings = load_app_settings()
+    initialize_session_state(st.session_state, settings, load_app_preferences(settings))
     apply_theme()
 
     registry = build_registry()
@@ -150,6 +166,7 @@ def _settings_from_session(settings: AppSettings) -> AppSettings:
     settings.dataset.language = str(st.session_state.language)
     settings.run.max_guess_attempts = int(st.session_state.max_guess_attempts)
     settings.run.max_clue_repairs = int(st.session_state.max_clue_repairs)
+    settings.run.guesser_hidden_retry_budget = int(st.session_state.guesser_hidden_retry_budget)
     settings.run.block_on_uncertain = bool(st.session_state.block_on_uncertain)
     settings.run.random_seed = int(st.session_state.random_seed)
     settings.run.device_preference = st.session_state.device_preference
@@ -592,6 +609,7 @@ def _render_role_settings_dialog(
             target_vram_gb=target_vram_gb,
         )
         sync_generation_widget_state(st.session_state, role)
+        persist_session_preferences(st.session_state)
         st.rerun()
     _render_generation_inputs(label, role, entry, st, target_vram_gb=target_vram_gb)
 
@@ -611,7 +629,7 @@ def _render_app_settings_dialog(
     settings_col_a, settings_col_b = st.columns(2)
     with settings_col_a:
         max_guess_attempts = st.number_input(
-            "Guess attempts",
+            "Max attempts",
             min_value=1,
             max_value=10,
             value=int(st.session_state.max_guess_attempts),
@@ -619,10 +637,18 @@ def _render_app_settings_dialog(
             format="%d",
         )
         max_clue_repairs = st.number_input(
-            "Max clue repairs",
+            "Cluer hidden repairs",
             min_value=1,
             max_value=10,
             value=int(st.session_state.max_clue_repairs),
+            step=1,
+            format="%d",
+        )
+        guesser_hidden_retry_budget = st.number_input(
+            "Guesser hidden retries",
+            min_value=0,
+            max_value=10,
+            value=int(st.session_state.guesser_hidden_retry_budget),
             step=1,
             format="%d",
         )
@@ -703,6 +729,7 @@ def _render_app_settings_dialog(
 
     st.session_state.max_guess_attempts = int(max_guess_attempts)
     st.session_state.max_clue_repairs = int(max_clue_repairs)
+    st.session_state.guesser_hidden_retry_budget = int(guesser_hidden_retry_budget)
     st.session_state.block_on_uncertain = bool(block_on_uncertain)
     st.session_state.device_preference = cast(Any, device_preference)
     st.session_state.memory_policy = cast(Any, memory_policy)
@@ -829,7 +856,8 @@ def _render_advanced_settings(
     with st.expander("Advanced settings", expanded=False):
         settings_col_a, settings_col_b, settings_col_c = st.columns(3)
         with settings_col_a:
-            st.number_input("Max clue repairs", min_value=1, max_value=10, key="max_clue_repairs")
+            st.number_input("Max attempts", min_value=1, max_value=10, key="max_guess_attempts")
+            st.number_input("Cluer hidden repairs", min_value=1, max_value=10, key="max_clue_repairs")
             st.checkbox("block_on_uncertain", key="block_on_uncertain")
             st.selectbox("Language", options=["en"], key="language")
             st.checkbox("Show gated models", key="show_gated_models")
@@ -845,6 +873,12 @@ def _render_advanced_settings(
                 key="memory_policy",
             )
         with settings_col_b:
+            st.number_input(
+                "Guesser hidden retries",
+                min_value=0,
+                max_value=10,
+                key="guesser_hidden_retry_budget",
+            )
             st.selectbox("Device preference", options=["auto", "cpu", "cuda"], key="device_preference")
             st.checkbox("Show hidden repairs", key="show_hidden_repairs")
             st.checkbox(
@@ -917,52 +951,38 @@ def _render_advanced_settings(
             target_vram_gb=target_vram_gb,
         )
 
-        with st.expander("Batch lab (parked for now)", expanded=False):
-            batch_col_a, batch_col_b, batch_col_c = st.columns(3)
-            all_entries = registry.list_entries(show_gated=bool(st.session_state.show_gated_models))
-            option_ids = [entry.id for entry in all_entries]
-            with batch_col_a:
-                st.multiselect(
-                    "Batch cluer models",
-                    options=option_ids,
-                    default=st.session_state.batch_cluer_ids or [st.session_state.cluer_model_id],
-                    format_func=lambda item_id: registry.get(item_id).display_name,
-                    key="batch_cluer_ids",
-                )
+        with st.expander("Benchmark settings", expanded=False):
+            eligible_cards = _filtered_cards(deck)
+            scope_options = {
+                "All eligible cards": "all_eligible",
+                "Random sample": "random_sample",
+            }
+            current_scope_label = next(
+                (
+                    label
+                    for label, value in scope_options.items()
+                    if value == str(st.session_state.benchmark_card_selection_mode)
+                ),
+                "All eligible cards",
+            )
+            selected_scope_label = st.selectbox(
+                "Card scope",
+                options=list(scope_options.keys()),
+                index=list(scope_options.keys()).index(current_scope_label),
+            )
+            st.session_state.benchmark_card_selection_mode = scope_options[selected_scope_label]
+            st.caption(
+                f"Eligible cards from the current category filter: {len(eligible_cards)}."
+            )
+            if st.session_state.benchmark_card_selection_mode == "random_sample":
                 st.number_input(
-                    "Batch sample size",
+                    "Random sample size",
                     min_value=1,
-                    max_value=max(1, len(deck.cards)),
-                    key="batch_sample_size",
+                    max_value=max(1, len(eligible_cards)),
+                    key="benchmark_sample_size",
                 )
-            with batch_col_b:
-                st.multiselect(
-                    "Batch guesser models",
-                    options=option_ids,
-                    default=st.session_state.batch_guesser_ids or [st.session_state.guesser_model_id],
-                    format_func=lambda item_id: registry.get(item_id).display_name,
-                    key="batch_guesser_ids",
-                )
-                st.number_input(
-                    "Repeats per card",
-                    min_value=1,
-                    max_value=20,
-                    key="batch_repeats_per_card",
-                )
-            with batch_col_c:
-                st.multiselect(
-                    "Batch judge models",
-                    options=option_ids,
-                    default=st.session_state.batch_judge_ids or [st.session_state.judge_model_id],
-                    format_func=lambda item_id: registry.get(item_id).display_name,
-                    key="batch_judge_ids",
-                )
-                st.multiselect(
-                    "Fixed card subset",
-                    options=[card.id for card in deck.cards],
-                    default=st.session_state.batch_fixed_card_ids,
-                    key="batch_fixed_card_ids",
-                )
+            else:
+                st.caption("The benchmark will play every eligible card exactly once in seeded order.")
 
         st.markdown("**Custom model entry**")
         custom_col_a, custom_col_b, custom_col_c = st.columns(3)
@@ -1167,6 +1187,7 @@ def _render_memory_fit_summary(
 
 def _apply_generation_widget_change(role: RoleName) -> None:
     apply_generation_widget_state(st.session_state, role)
+    persist_session_preferences(st.session_state)
 
 
 def _format_gb(value: float | None, *, decimals: int = 2) -> str:
@@ -1211,7 +1232,7 @@ def _render_status_strip(logger: RunLogger | None) -> None:
     labels = [
         ("run id", metrics["run_id"]),
         ("round id", metrics["round_id"]),
-        ("guess attempt", metrics["attempt"]),
+        ("attempt", metrics["attempt"]),
         ("clue repair", metrics["repair"]),
         ("state", metrics["state"]),
         ("latency", metrics["latency"]),
@@ -1284,6 +1305,24 @@ def _render_live_activity_panel() -> None:
         st.write(f"Mode: {job.kind}")
         st.write(f"Latest event: `{event_type}`")
         st.write(f"Elapsed: {elapsed_seconds:.1f}s")
+        if job.kind == "benchmark":
+            progress = cast(dict[str, Any] | None, st.session_state.get("benchmark_progress"))
+            if progress:
+                current_card_id = str(progress.get("current_card_id", "n/a"))
+                current_target = str(progress.get("current_target", "") or "").strip()
+                current_card_label = (
+                    f"{current_card_id} • {current_target}"
+                    if current_target and current_card_id != "n/a"
+                    else current_card_id
+                )
+                st.write(
+                    f"Progress: {int(progress.get('completed_cards', 0))} / {int(progress.get('total_cards', 0))}"
+                )
+                st.write(f"Current card: `{current_card_label}`")
+                st.write(f"Solved so far: {int(progress.get('solved_so_far', 0))}")
+                st.write(
+                    f"Solve rate so far: {float(progress.get('card_solve_rate_so_far', 0.0)) * 100:.0f}%"
+                )
         if event_type == "model_load_started":
             st.info("Loading cached model weights into RAM/VRAM. This can take a while on first use.")
         elif event_type == "model_download_started":
@@ -1303,6 +1342,12 @@ def _render_main_body(
     selected_models: dict[str, ModelEntry],
     model_manager: ModelManager,
 ) -> None:
+    session = SessionFacade(st.session_state)
+    logger = session.current_logger
+    current_result = session.current_result
+    benchmark_summary = session.benchmark_summary
+    active_job = cast(ActiveJob | None, st.session_state.active_job)
+
     left_col, middle_col, right_col = st.columns([2, 3, 2], gap="small")
     filtered_cards = _filtered_cards(deck)
     selected_card = _selected_card(deck)
@@ -1312,10 +1357,10 @@ def _render_main_body(
             st.markdown("<div class='section-heading'>Taboo card</div>", unsafe_allow_html=True)
             card_showcase_col, card_action_col = st.columns([0.9, 0.1], gap="small", vertical_alignment="center")
             with card_showcase_col:
-                if selected_card is None:
-                    st.warning("Enable at least one category to reveal a card.")
-                else:
-                    st.markdown(_game_card_html(selected_card), unsafe_allow_html=True)
+                card_slot = st.empty()
+                if not _active_run_present():
+                    with card_slot.container():
+                        _render_card_showcase(deck=deck, logger=logger)
             random_disabled = not filtered_cards
             with card_action_col:
                 if st.button(
@@ -1341,12 +1386,20 @@ def _render_main_body(
             if not st.session_state.selected_categories:
                 st.caption("Turn on at least one category to allow random selection and running.")
 
-            control_bottom_left, control_bottom_right = st.columns([1, 0.12], vertical_alignment="center")
+            control_bottom_left, control_bottom_middle, control_bottom_right = st.columns(
+                [0.58, 0.42, 0.12],
+                vertical_alignment="center",
+            )
             run_disabled = selected_card is None or _active_run_present()
             st.session_state.start_round_clicked = control_bottom_left.button(
                 "Start",
                 width="stretch",
                 disabled=run_disabled,
+            )
+            st.session_state.start_benchmark_clicked = control_bottom_middle.button(
+                "Benchmark",
+                width="stretch",
+                disabled=not filtered_cards or _active_run_present(),
             )
             control_bottom_left.caption(f"Seed {int(st.session_state.random_seed)}")
             app_settings_clicked = control_bottom_right.button(
@@ -1362,12 +1415,7 @@ def _render_main_body(
                 )
 
     settings = _settings_from_session(load_app_settings())
-    registry = build_registry()
-    _maybe_process_actions(settings, registry, model_manager, deck, selected_models)
-
-    session = SessionFacade(st.session_state)
-    logger = session.current_logger
-    current_result = session.current_result
+    _maybe_process_actions(settings, model_manager, deck, selected_models)
 
     with middle_col:
         with st.container(border=True, key="bottom_transcript_panel", height="stretch"):
@@ -1388,34 +1436,48 @@ def _render_main_body(
             metrics_slot = st.empty()
             if not _active_run_present():
                 with metrics_slot.container():
-                    render_round_pulse_inline(
-                        session=session,
-                        logger=logger,
-                        selected_models=selected_models,
-                        model_manager=model_manager,
-                        current_events=[] if logger is None else live_logger_events(logger),
-                    )
+                    if benchmark_summary is not None:
+                        render_benchmark_summary_inline(
+                            summary=benchmark_summary,
+                            logger=logger,
+                        )
+                    else:
+                        render_round_pulse_inline(
+                            session=session,
+                            logger=logger,
+                            selected_models=selected_models,
+                            model_manager=model_manager,
+                            current_events=[] if logger is None else live_logger_events(logger),
+                        )
     if _active_run_present():
         _render_live_round_panels(
+            card_slot=card_slot,
             transcript_slot=transcript_slot,
             metrics_slot=metrics_slot,
+            deck=deck,
             selected_models=selected_models,
             model_manager=model_manager,
+            active_job=active_job,
         )
 
 
 @st.fragment(run_every=LIVE_PANEL_REFRESH_SECONDS)
 def _render_live_round_panels(
     *,
+    card_slot: Any,
     transcript_slot: Any,
     metrics_slot: Any,
+    deck: Any,
     selected_models: dict[str, ModelEntry],
     model_manager: ModelManager,
+    active_job: ActiveJob | None,
 ) -> None:
     session = SessionFacade(st.session_state)
     _poll_active_job_updates()
     logger = session.current_logger
     current_result = session.current_result
+    with card_slot.container():
+        _render_card_showcase(deck=deck, logger=logger)
     with transcript_slot.container():
         render_transcript_panel_content(
             session=session,
@@ -1424,13 +1486,19 @@ def _render_live_round_panels(
             active_run_present=True,
         )
     with metrics_slot.container():
-        render_live_round_pulse_inline(
-            session=session,
-            logger=logger,
-            selected_models=selected_models,
-            model_manager=model_manager,
-            current_events=[] if logger is None else live_logger_events(logger),
-        )
+        if active_job is not None and active_job.kind == "benchmark":
+            render_live_benchmark_inline(
+                progress=session.benchmark_progress,
+                logger=logger,
+            )
+        else:
+            render_live_round_pulse_inline(
+                session=session,
+                logger=logger,
+                selected_models=selected_models,
+                model_manager=model_manager,
+                current_events=[] if logger is None else live_logger_events(logger),
+            )
     if _finalize_active_job_if_needed():
         st.rerun()
 
@@ -1503,13 +1571,35 @@ def _session_rng() -> random.Random:
 
 def _display_card(deck: Any, logger: RunLogger | None) -> Any | None:
     """Prefer the live round card while a session is active, else show the selected card."""
+    benchmark_progress = cast(dict[str, Any] | None, st.session_state.get("benchmark_progress"))
+    if benchmark_progress is not None:
+        progress_card_id = str(benchmark_progress.get("current_card_id", "")).strip()
+        if progress_card_id:
+            progress_card = _card_by_id(deck, progress_card_id)
+            if progress_card is not None:
+                return progress_card
     if logger is not None:
         latest_card_id = _latest_logger_card_id(logger)
         if latest_card_id:
-            for card in deck.cards:
-                if card.id == latest_card_id:
-                    return card
+            latest_card = _card_by_id(deck, latest_card_id)
+            if latest_card is not None:
+                return latest_card
     return _selected_card(deck)
+
+
+def _render_card_showcase(*, deck: Any, logger: RunLogger | None) -> None:
+    display_card = _display_card(deck, logger)
+    if display_card is None:
+        st.warning("Enable at least one category to reveal a card.")
+    else:
+        st.markdown(_game_card_html(display_card), unsafe_allow_html=True)
+
+
+def _card_by_id(deck: Any, card_id: str) -> Any | None:
+    for card in deck.cards:
+        if card.id == card_id:
+            return card
+    return None
 
 
 def _latest_logger_card_id(logger: RunLogger) -> str | None:
@@ -1544,7 +1634,6 @@ def _game_card_html(card: Any) -> str:
 
 def _maybe_process_actions(
     settings: AppSettings,
-    registry: ModelRegistry,
     model_manager: ModelManager,
     deck: Any,
     selected_models: dict[str, ModelEntry],
@@ -1570,8 +1659,12 @@ def _maybe_process_actions(
         session.current_logger = logger
         st.session_state.current_state = "generating_clue"
         session.current_error_message = None
+        session.benchmark_error = None
         st.session_state.stop_requested = False
         session.current_result = None
+        session.benchmark_plan = None
+        session.benchmark_progress = None
+        session.benchmark_summary = None
         session.active_job = start_single_round_job(
             settings=settings,
             model_manager=model_manager,
@@ -1583,61 +1676,71 @@ def _maybe_process_actions(
         )
         st.rerun()
 
-    if st.session_state.start_batch_clicked:
+    if st.session_state.start_benchmark_clicked:
+        if not _validate_model_selection(selected_models):
+            return
         if _active_run_present():
             st.warning("A run is already in progress.")
             return
         archive_current_logger_for_transcript(session)
-        batch_model_ids = {
-            "cluer": st.session_state.batch_cluer_ids or [st.session_state.cluer_model_id],
-            "guesser": st.session_state.batch_guesser_ids or [st.session_state.guesser_model_id],
-            "judge": st.session_state.batch_judge_ids or [st.session_state.judge_model_id],
-        }
-        if not all(batch_model_ids.values()):
-            st.error("Select at least one model for each batch role.")
+        eligible_cards = _filtered_cards(deck)
+        if not eligible_cards:
+            st.error("Enable at least one category before starting a benchmark.")
+            return
+        try:
+            benchmark_plan = _create_benchmark_plan(
+                eligible_cards=eligible_cards,
+                selected_models=selected_models,
+            )
+        except ValueError as exc:
+            st.error(str(exc))
             return
         logger = build_logger(
             settings.run.log_dir,
             console_trace=settings.run.console_trace,
         )
-        logger.emit("app_started", state="batch_running")
-        cards = _batch_cards(deck)
-        tasks = [
-            {
-                "card_id": card.id,
-                "cluer_model_id": cluer_id,
-                "guesser_model_id": guesser_id,
-                "judge_model_id": judge_id,
-            }
-            for cluer_id in batch_model_ids["cluer"]
-            for guesser_id in batch_model_ids["guesser"]
-            for judge_id in batch_model_ids["judge"]
-            for _ in range(int(st.session_state.batch_repeats_per_card))
-            for card in cards
-        ]
+        logger.emit("app_started", state="benchmark_running", run_mode="benchmark")
         session.current_logger = logger
         session.current_result = None
-        st.session_state.current_state = "batch_running"
+        session.benchmark_plan = benchmark_plan.model_dump(mode="json")
+        session.benchmark_progress = None
+        session.benchmark_summary = None
+        session.benchmark_error = None
+        st.session_state.current_state = "benchmark_running"
         session.current_error_message = None
         st.session_state.stop_requested = False
-        session.active_job = start_batch_job(
+        session.active_job = start_benchmark_job(
             settings=settings,
             model_manager=model_manager,
             logger=logger,
-            registry=registry,
-            tasks=tasks,
-            cards_by_id={card.id: card for card in deck.cards},
+            plan=benchmark_plan,
+            cards=eligible_cards,
+            cluer_entry=selected_models["cluer"],
+            guesser_entry=selected_models["guesser"],
+            judge_entry=selected_models["judge"],
         )
         st.rerun()
 
-
-def _batch_cards(deck: Any) -> list[Any]:
-    fixed_ids = set(st.session_state.batch_fixed_card_ids)
-    if fixed_ids:
-        cards = [card for card in deck.cards if card.id in fixed_ids]
-    else:
-        cards = deck.cards[: int(st.session_state.batch_sample_size)]
-    return cards
+def _create_benchmark_plan(
+    *,
+    eligible_cards: list[Any],
+    selected_models: dict[str, ModelEntry],
+) -> BenchmarkPlan:
+    sample_size = (
+        int(st.session_state.benchmark_sample_size)
+        if str(st.session_state.benchmark_card_selection_mode) == "random_sample"
+        else None
+    )
+    return create_benchmark_plan(
+        eligible_cards=eligible_cards,
+        selected_categories=list(st.session_state.selected_categories),
+        cluer_model_id=selected_models["cluer"].id,
+        guesser_model_id=selected_models["guesser"].id,
+        judge_model_id=selected_models["judge"].id,
+        seed=int(st.session_state.random_seed),
+        card_selection_mode=cast(Any, st.session_state.benchmark_card_selection_mode),
+        requested_sample_size=sample_size,
+    )
 
 
 def _validate_model_selection(selected_models: dict[str, ModelEntry]) -> bool:
@@ -1679,6 +1782,16 @@ def _poll_active_job_updates() -> bool:
                 if result is not None:
                     job.result = result
                     changed = True
+            elif payload_type == "benchmark_progress":
+                payload = message.get("progress", {})
+                job.benchmark_progress = payload
+                st.session_state.benchmark_progress = payload
+                st.session_state.benchmark_running = True
+                changed = True
+            elif payload_type == "benchmark_summary":
+                payload = message.get("summary", {})
+                job.benchmark_summary = payload
+                changed = True
             elif payload_type == "error":
                 job.error_message = str(message.get("error_message", "Unknown error"))
                 changed = True
@@ -1704,28 +1817,35 @@ def _finalize_active_job_if_needed() -> bool:
     if not job.completed:
         return False
 
-    if job.thread is not None:
-        job.thread.join(timeout=0.1)
     if job.process is not None:
         job.process.join(timeout=0.1)
     st.session_state.current_logger = job.logger
 
     if job.error_message is not None:
         st.session_state.current_state = "idle"
-        st.session_state.current_error_message = job.error_message
+        if job.kind == "benchmark":
+            st.session_state.benchmark_error = job.error_message
+        else:
+            st.session_state.current_error_message = job.error_message
+        st.session_state.benchmark_running = False
         st.session_state.active_job = None
         return True
 
     st.session_state.current_error_message = None
-    if job.result is not None:
+    st.session_state.benchmark_error = None
+    if job.kind == "single" and job.result is not None:
         st.session_state.current_result = job.result
         st.session_state.selected_card_id = job.result.card.id
         st.session_state.current_state = "round_finished"
-    elif job.batch_results:
-        st.session_state.current_result = job.batch_results[-1]
-        st.session_state.current_state = "idle"
+        st.session_state.benchmark_running = False
+    elif job.kind == "benchmark" and job.benchmark_summary is not None:
+        st.session_state.current_result = None
+        st.session_state.benchmark_summary = job.benchmark_summary
+        st.session_state.current_state = "benchmark_finished"
+        st.session_state.benchmark_running = False
     else:
         st.session_state.current_state = "idle"
+        st.session_state.benchmark_running = False
     st.session_state.stop_requested = False
     st.session_state.active_job = None
     return True

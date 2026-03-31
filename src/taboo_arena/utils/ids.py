@@ -21,3 +21,7 @@ def new_batch_id() -> str:
     """Create a batch identifier."""
     return f"batch_{uuid4().hex[:10]}"
 
+
+def new_benchmark_id() -> str:
+    """Create a benchmark identifier."""
+    return f"benchmark_{uuid4().hex[:10]}"

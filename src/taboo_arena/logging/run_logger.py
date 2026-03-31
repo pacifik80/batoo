@@ -13,7 +13,7 @@ from typing import Any
 
 import pandas as pd
 
-from taboo_arena.analytics.metrics import compute_summary_metrics
+from taboo_arena.analytics.metrics import compute_benchmark_run_metrics, compute_summary_metrics
 from taboo_arena.logging.schemas import RoundSummaryRecord
 from taboo_arena.utils.ids import new_run_id
 from taboo_arena.utils.paths import get_log_dir
@@ -40,11 +40,13 @@ class RunLogger:
         self.rounds_csv_path = self.run_dir / "rounds.csv"
         self.rounds_parquet_path = self.run_dir / "rounds.parquet"
         self.summary_csv_path = self.run_dir / "summary.csv"
+        self.run_meta_path = self.run_dir / "run_meta.json"
         self._lock = RLock()
         self.events: list[dict[str, Any]] = []
         self.round_summaries: list[RoundSummaryRecord] = []
         self.latest_prompt_by_role: dict[str, dict[str, Any]] = {}
         self.latest_response_by_role: dict[str, dict[str, Any]] = {}
+        self.run_metadata: dict[str, Any] = {}
         self._artifacts_dirty = False
 
     def emit(self, event_type: str, **fields: Any) -> dict[str, Any]:
@@ -77,6 +79,20 @@ class RunLogger:
         if flush:
             self.flush()
 
+    def set_run_metadata(self, metadata: dict[str, Any]) -> None:
+        """Persist run-level metadata for summary export and later inspection."""
+        normalized = {key: _metadata_cell(value) for key, value in metadata.items()}
+        with self._lock:
+            self.run_metadata = dict(normalized)
+            self._artifacts_dirty = True
+        self.write_json_artifact("run_meta.json", normalized)
+
+    def write_json_artifact(self, filename: str, payload: dict[str, Any]) -> Path:
+        """Write a JSON artifact inside the current run directory."""
+        path = self.run_dir / filename
+        path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+        return path
+
     def flush(self) -> None:
         """Write round tables and summary metrics."""
         with self._lock:
@@ -96,6 +112,7 @@ class RunLogger:
                     "solved",
                     "solved_on_attempt",
                     "total_guess_attempts_used",
+                    "total_visible_guesses_made",
                     "total_clue_repairs",
                     "first_clue_passed_without_repair",
                     "clue_repaired_successfully",
@@ -111,6 +128,11 @@ class RunLogger:
         rounds_df.to_parquet(self.rounds_parquet_path, index=False)
 
         summary_rows = compute_summary_metrics(round_summaries, events)
+        run_metadata = self.snapshot_run_metadata()
+        if run_metadata.get("run_mode") == "benchmark":
+            summary_rows.update(compute_benchmark_run_metrics(round_summaries))
+        if run_metadata:
+            summary_rows.update(run_metadata)
         pd.DataFrame([summary_rows]).to_csv(self.summary_csv_path, index=False)
         with self._lock:
             self._artifacts_dirty = False
@@ -137,6 +159,11 @@ class RunLogger:
         with self._lock:
             return list(self.round_summaries)
 
+    def snapshot_run_metadata(self) -> dict[str, Any]:
+        """Return a stable copy of run-level metadata."""
+        with self._lock:
+            return dict(self.run_metadata)
+
     def ingest_event(self, event: dict[str, Any]) -> None:
         """Append an externally produced event to in-memory state."""
         with self._lock:
@@ -158,6 +185,8 @@ class RunLogger:
                 self.rounds_csv_path,
                 self.rounds_parquet_path,
                 self.summary_csv_path,
+                self.run_meta_path,
+                self.run_dir / "benchmark_plan.json",
             ]:
                 if path.exists():
                     archive.write(path, arcname=path.name)
@@ -226,3 +255,10 @@ class RunLogger:
     def _console_print_event(self, event: dict[str, Any]) -> None:
         """Print one structured event to stdout."""
         print(f"[taboo-arena:event] {json.dumps(event, default=str)}", flush=True)
+
+
+def _metadata_cell(value: Any) -> Any:
+    """Normalize metadata values for CSV-friendly one-row summaries."""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, default=str)
+    return value

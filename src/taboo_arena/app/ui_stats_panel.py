@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import streamlit as st
 
-from taboo_arena.analytics import compute_summary_metrics
+from taboo_arena.analytics import compute_benchmark_run_metrics, compute_summary_metrics
 from taboo_arena.app.session_facade import SessionFacade
 from taboo_arena.logging.run_logger import RunLogger
 from taboo_arena.models import ModelEntry, ModelManager
@@ -130,6 +130,121 @@ def render_live_round_pulse_inline(
     )
 
 
+def render_live_benchmark_inline(
+    *,
+    progress: dict[str, Any] | None,
+    logger: RunLogger | None,
+) -> None:
+    """Render live benchmark progress in the metrics panel."""
+    if not progress:
+        st.caption("Benchmark progress will appear after the first card starts.")
+        return
+    completed_cards = int(progress.get("completed_cards", 0) or 0)
+    total_cards = int(progress.get("total_cards", 0) or 0)
+    solved_so_far = int(progress.get("solved_so_far", 0) or 0)
+    solve_rate = float(progress.get("card_solve_rate_so_far", 0.0) or 0.0)
+    elapsed_seconds = float(progress.get("elapsed_seconds", 0.0) or 0.0)
+    current_card_id = str(progress.get("current_card_id", "n/a") or "n/a")
+    current_target = str(progress.get("current_target", "") or "").strip()
+    current_card_label = (
+        f"{current_card_id} • {current_target}"
+        if current_target and current_card_id != "n/a"
+        else current_card_id
+    )
+    grouped_cards = [
+        (
+            "Benchmark",
+            [
+                ("Completed", f"{completed_cards} / {total_cards}"),
+                ("Solved", str(solved_so_far)),
+                ("Solve rate", format_ratio(solve_rate)),
+                ("Elapsed", f"{elapsed_seconds:.1f}s"),
+            ],
+        ),
+        (
+            "Current card",
+            [
+                ("Card", current_card_label),
+                ("Run mode", "benchmark"),
+                ("Run id", "n/a" if logger is None else logger.run_id),
+                ("Status", "running"),
+            ],
+        ),
+    ]
+    metrics_html = "".join(metric_group_html(title, items) for title, items in grouped_cards)
+    st.markdown(metrics_html, unsafe_allow_html=True)
+    warnings = [] if logger is None else logger.latest_errors()
+    if warnings:
+        st.warning(warnings[-1])
+
+
+def render_benchmark_summary_inline(
+    *,
+    summary: dict[str, Any],
+    logger: RunLogger | None,
+) -> None:
+    """Render the final benchmark KPI summary."""
+    failure_breakdown = summary.get("failure_reason_breakdown", {})
+    if not isinstance(failure_breakdown, dict):
+        failure_breakdown = {}
+    attempt_3_label = str(summary.get("solved_on_attempt_3_label", "Attempt 3"))
+    grouped_cards = [
+        (
+            "Model trio",
+            [
+                ("Cluer", str(summary.get("cluer_model_id", "n/a"))),
+                ("Guesser", str(summary.get("guesser_model_id", "n/a"))),
+                ("Judge", str(summary.get("judge_model_id", "n/a"))),
+                ("Run id", "n/a" if logger is None else logger.run_id),
+            ],
+        ),
+        (
+            "Primary KPI",
+            [
+                (
+                    "Solved cards",
+                    f"{int(summary.get('cards_solved_total', 0) or 0)} / {int(summary.get('cards_played_total', 0) or 0)}",
+                ),
+                ("Solve rate", format_ratio(summary.get("card_solve_rate", 0.0))),
+                ("Attempt 1", str(int(summary.get("solved_on_attempt_1_count", 0) or 0))),
+                ("Attempt 2", str(int(summary.get("solved_on_attempt_2_count", 0) or 0))),
+            ],
+        ),
+        (
+            "Failures",
+            [
+                (attempt_3_label, str(int(summary.get("solved_on_attempt_3_count", 0) or 0))),
+                ("Clue not repaired", str(int(summary.get("clue_not_repaired_count", 0) or 0))),
+                (
+                    "Max attempts reached",
+                    str(int(summary.get("max_guess_attempts_reached_count", 0) or 0)),
+                ),
+                ("Avg repairs", f"{float(summary.get('average_repairs_per_card', 0.0) or 0.0):.2f}"),
+            ],
+        ),
+        (
+            "Runtime",
+            [
+                ("Avg latency", format_ms(summary.get("average_latency_ms"))),
+                ("Elapsed", f"{float(summary.get('elapsed_seconds', 0.0) or 0.0):.1f}s"),
+                ("Failures seen", str(sum(int(value) for value in failure_breakdown.values()))),
+                ("Logs", "Open run directory"),
+            ],
+        ),
+    ]
+    metrics_html = "".join(metric_group_html(title, items) for title, items in grouped_cards)
+    st.markdown(metrics_html, unsafe_allow_html=True)
+    if logger is not None:
+        st.caption(f"Artifacts: {logger.run_dir}")
+        st.download_button(
+            "Export",
+            data=logger.export_run_archive(),
+            file_name=f"{logger.run_id}.zip",
+            mime="application/zip",
+            width="stretch",
+        )
+
+
 def render_live_round_metric_groups(
     *,
     events: list[dict[str, Any]],
@@ -143,8 +258,16 @@ def render_live_round_metric_groups(
 
     last_event = events[-1]
     clue_drafts = [event for event in events if event.get("event_type") == "clue_draft_generated"]
+    clue_repairs = [event for event in events if event.get("event_type") == "clue_internal_retry_requested"]
     repair_requests = [event for event in events if event.get("event_type") == "clue_repair_requested"]
-    guesses = [event for event in events if event.get("event_type") == "guess_generated"]
+    guess_hidden_retries = [
+        event for event in events if event.get("event_type") == "guess_hidden_retry_requested"
+    ]
+    guesses = [
+        event
+        for event in events
+        if event.get("event_type") == "guess_generated" and str(event.get("visible_guess_text", "")).strip()
+    ]
     warnings = [
         event
         for event in events
@@ -162,8 +285,7 @@ def render_live_round_metric_groups(
             [
                 ("State", str(last_event.get("state", "starting"))),
                 ("Attempt", str(last_event.get("attempt_no", 0) or 0)),
-                # Legacy "Repairs" display keeps counting all clue drafts for compatibility.
-                ("Repairs", str(len(clue_drafts))),
+                ("Cluer repairs", str(len(clue_repairs))),
                 ("Loaded now", str(loaded_model_count)),
             ],
         ),
@@ -171,9 +293,9 @@ def render_live_round_metric_groups(
             "Live flow",
             [
                 ("Clues drafted", str(len(clue_drafts))),
-                ("Repairs asked", str(len(repair_requests))),
+                ("Judge rejects", str(len(repair_requests))),
                 ("Guesses made", str(len(guesses))),
-                ("Judge warnings", str(len(warnings))),
+                ("Guesser retries", str(len(guess_hidden_retries))),
             ],
         ),
         (
@@ -182,7 +304,7 @@ def render_live_round_metric_groups(
                 ("Events", str(len(events))),
                 ("Last event", str(last_event.get("event_type", "n/a"))),
                 ("Latency seen", format_ms(sum(latencies)) if latencies else "n/a"),
-                ("Unique repos", str(shared_models)),
+                ("Judge warnings", str(len(warnings))),
             ],
         ),
     ]
@@ -200,6 +322,7 @@ def render_metric_groups(
     """Render summary metrics from round summaries and event history."""
     summary = compute_summary_metrics(round_summaries, events)
     latency_summary = latency_summary_rows(summary, round_summaries)
+    attempt_3_label = str(summary.get("solve_on_attempt_3_label", "Solve on 3"))
     grouped_cards = [
         (
             "Overview",
@@ -220,12 +343,12 @@ def render_metric_groups(
             ],
         ),
         (
-            "Guessing",
+            "Attempts",
             [
                 ("Solve on 1", format_ratio(summary["solve_on_attempt_1_rate"])),
                 ("Solve on 2", format_ratio(summary["solve_on_attempt_2_rate"])),
-                ("Solve on 3", format_ratio(summary["solve_on_attempt_3_rate"])),
-                ("Wrong before solve", f"{float(summary['average_wrong_guesses_before_success']):.2f}"),
+                (attempt_3_label, format_ratio(summary["solve_on_attempt_3_rate"])),
+                ("Wrong guesses", f"{float(summary['average_wrong_guesses_before_success']):.2f}"),
             ],
         ),
         (

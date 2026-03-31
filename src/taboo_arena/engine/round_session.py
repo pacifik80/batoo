@@ -61,8 +61,8 @@ class RoundPhase(StrEnum):
 class RoundResult:
     """Result of a benchmark round.
 
-    `total_clue_repairs` keeps the legacy exported meaning: total clue drafts attempted,
-    including the first draft on each guess attempt.
+    `total_guess_attempts_used` keeps the legacy field name, but now counts public
+    clue attempts: each clue sent to the judge consumes one attempt.
     """
 
     run_id: str
@@ -71,6 +71,7 @@ class RoundResult:
     solved: bool
     solved_on_attempt: int | None
     total_guess_attempts_used: int
+    total_visible_guesses_made: int
     total_clue_repairs: int
     first_clue_passed_without_repair: bool
     clue_repaired_successfully: bool
@@ -124,11 +125,12 @@ class RoundSessionState:
     current_selected_angle: str | None = None
     current_selected_guess_candidate: str | None = None
     current_guess_match_status: str | None = None
+    visible_guess_count: int = 0
     first_clue_passed_without_repair: bool = False
     clue_repaired_successfully: bool = False
     solved: bool = False
     solved_on_attempt: int | None = None
-    terminal_reason: str = "max_guess_attempts_reached"
+    terminal_reason: str = "max_attempts_reached"
     last_repair_feedback: CluerRepairFeedbackPayload | None = None
     result: RoundResult | None = None
     error_message: str | None = None
@@ -181,6 +183,7 @@ class RoundStepper:
             batch_id=batch_id,
             round_id=round_id,
             card_id=card.id,
+            target=card.target,
             state="generating_clue",
             source_repo=card.source_repo,
             source_ref=card.source_ref,
@@ -439,7 +442,6 @@ class RoundStepper:
                 state.repair_no += 1
                 state.clue_internal_cycle_no = state.repair_no
                 return RoundPhase.CLUE_PREPARE
-            state.attempts.append(state.current_attempt_trace)
             state.terminal_reason = "clue_not_repaired"
             self.logger.emit(
                 "round_finished",
@@ -693,28 +695,25 @@ class RoundStepper:
             blocked_angles=blocked_for_retry,
             llm_result=llm_result,
         )
-
-        if state.repair_no < state.settings.max_clue_repairs:
-            state.repair_no += 1
-            state.clue_internal_cycle_no = state.repair_no
-            state.phase = RoundPhase.CLUE_PREPARE
+        state.attempts.append(state.current_attempt_trace)
+        if state.attempt_no >= state.settings.max_guess_attempts:
+            state.terminal_reason = "max_attempts_reached"
+            self.logger.emit(
+                "round_finished",
+                batch_id=state.batch_id,
+                round_id=state.round_id,
+                card_id=state.card.id,
+                state="round_finished",
+                terminal_reason=state.terminal_reason,
+                cluer_model_id=state.cluer_entry.id,
+                guesser_model_id=state.guesser_entry.id,
+                judge_model_id=state.judge_entry.id,
+            )
+            self._finalize_round()
+            state.phase = RoundPhase.FINISHED
             return
 
-        state.attempts.append(state.current_attempt_trace)
-        state.terminal_reason = "clue_not_repaired"
-        self.logger.emit(
-            "round_finished",
-            batch_id=state.batch_id,
-            round_id=state.round_id,
-            card_id=state.card.id,
-            state="round_finished",
-            terminal_reason=state.terminal_reason,
-            cluer_model_id=state.cluer_entry.id,
-            guesser_model_id=state.guesser_entry.id,
-            judge_model_id=state.judge_entry.id,
-        )
-        self._finalize_round()
-        state.phase = RoundPhase.FINISHED
+        self._advance_to_next_attempt(preserve_repair_feedback=True)
 
     def _emit_guess_started(self) -> None:
         state = self.state
@@ -901,6 +900,8 @@ class RoundStepper:
         state.current_selected_guess_candidate = selected_guess_text_raw
         state.current_guess_match_status = str(selected_match_result.status)
         visible_guess_text = "" if selected_guess_text_raw == "(no valid guess)" else selected_guess_text_raw
+        if visible_guess_text:
+            state.visible_guess_count += 1
         self.logger.emit(
             "guess_validation_completed",
             batch_id=state.batch_id,
@@ -1003,7 +1004,7 @@ class RoundStepper:
         if selected_guess_text_raw != "(no valid guess)":
             state.wrong_guesses.append(selected_guess_text_raw)
         if state.attempt_no >= state.settings.max_guess_attempts:
-            state.terminal_reason = "max_guess_attempts_reached"
+            state.terminal_reason = "max_attempts_reached"
             self.logger.emit(
                 "round_finished",
                 batch_id=state.batch_id,
@@ -1018,19 +1019,30 @@ class RoundStepper:
             self._finalize_round()
             return
 
+        self._advance_to_next_attempt(preserve_repair_feedback=False)
+
+    def _advance_to_next_attempt(self, *, preserve_repair_feedback: bool) -> None:
+        state = self.state
         state.attempt_no += 1
         state.repair_no = 1
         state.clue_internal_cycle_no = 1
         state.guess_internal_cycle_no = 0
         state.current_attempt_trace = AttemptTrace(attempt_no=state.attempt_no)
-        state.current_selected_angle = None
+        state.current_clue_text = None
         state.current_selected_clue_candidate = None
-        state.current_candidate_clues = []
+        state.current_clue_normalized = None
+        state.current_logical_result = None
+        state.current_clue_latency_ms = 0.0
+        state.current_clue_prompt_template_id = ""
         state.current_allowed_angles = []
+        state.current_candidate_clues = []
         state.current_blocked_terms = []
+        state.current_selected_angle = None
         state.current_selected_guess_candidate = None
         state.current_guess_match_status = None
-        state.last_repair_feedback = None
+        state.judge_warning_flags = []
+        if not preserve_repair_feedback:
+            state.last_repair_feedback = None
         state.phase = RoundPhase.CLUE_PREPARE
 
     def _finalize_round(self) -> None:
@@ -1044,7 +1056,8 @@ class RoundStepper:
             solved=self.state.solved,
             solved_on_attempt=self.state.solved_on_attempt,
             total_guess_attempts_used=len(self.state.attempts),
-            total_clue_repairs=self.state.total_clue_drafts,
+            total_visible_guesses_made=self.state.visible_guess_count,
+            total_clue_repairs=self.state.total_repairs_after_first_failure,
             first_clue_passed_without_repair=self.state.first_clue_passed_without_repair,
             clue_repaired_successfully=self.state.clue_repaired_successfully,
             clue_not_repaired=self.state.terminal_reason == "clue_not_repaired",
@@ -1068,6 +1081,7 @@ def _build_round_summary(result: RoundResult) -> RoundSummaryRecord:
         solved=result.solved,
         solved_on_attempt=result.solved_on_attempt,
         total_guess_attempts_used=result.total_guess_attempts_used,
+        total_visible_guesses_made=result.total_visible_guesses_made,
         total_clue_repairs=result.total_clue_repairs,
         first_clue_passed_without_repair=result.first_clue_passed_without_repair,
         clue_repaired_successfully=result.clue_repaired_successfully,

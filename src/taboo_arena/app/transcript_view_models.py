@@ -35,6 +35,14 @@ class BubbleRawArtifact:
 
 
 @dataclass(slots=True)
+class BubblePublicLine:
+    """One public text line inside a transcript bubble."""
+
+    text: str
+    is_struck_out: bool = False
+
+
+@dataclass(slots=True)
 class TranscriptMessage:
     """One rendered transcript bubble with public text and hidden debug details."""
 
@@ -44,6 +52,7 @@ class TranscriptMessage:
     alignment: TranscriptAlignment
     message_id: str = ""
     public_text: str = ""
+    public_lines: list[BubblePublicLine] = field(default_factory=list)
     pending_public_text: str | None = None
     status_label: str | None = None
     is_struck_out: bool = False

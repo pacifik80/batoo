@@ -146,7 +146,7 @@ def render_result_banner(result: Any) -> None:
         text = "Round ended: clue_not_repaired"
         css_class = "result-banner result-fail"
     else:
-        text = f"Failed after {int(result.total_guess_attempts_used)} guesses"
+        text = f"Failed after {int(result.total_guess_attempts_used)} attempts"
         css_class = "result-banner result-fail"
     st.markdown(f"<div class='{css_class}'>{text}</div>", unsafe_allow_html=True)
 
@@ -172,11 +172,26 @@ def transcript_message_html(message: TranscriptMessage) -> str:
         if message.status_label
         else ""
     )
-    text_html = (
-        f"<div class='transcript-text{' transcript-text-struck' if message.is_struck_out else ''}'>{html.escape(message.public_text)}</div>"
-        if message.public_text
-        else ""
-    )
+    if message.public_lines:
+        text_html = (
+            "<div class='transcript-text-stack'>"
+            + "".join(
+                (
+                    "<div class='transcript-text"
+                    + (" transcript-text-struck" if line.is_struck_out else "")
+                    + f"'>{html.escape(line.text)}</div>"
+                )
+                for line in message.public_lines
+                if line.text
+            )
+            + "</div>"
+        )
+    else:
+        text_html = (
+            f"<div class='transcript-text{' transcript-text-struck' if message.is_struck_out else ''}'>{html.escape(message.public_text)}</div>"
+            if message.public_text
+            else ""
+        )
     debug_html = _transcript_debug_html(message)
     bubble_html = (
         f"<div class='transcript-bubble {bubble_class} transcript-inline-bubble'>"

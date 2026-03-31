@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
-from taboo_arena.app.jobs import ActiveJob, _batch_target
+from taboo_arena.app.jobs import _benchmark_process_target
 from taboo_arena.app.live_round import advance_live_round, start_live_round
 from taboo_arena.app.session_facade import SessionFacade
 from taboo_arena.config import AppSettings, RunSettings
-from taboo_arena.engine.batch import ExpandedBatchTask
+from taboo_arena.engine import BenchmarkPlan, BenchmarkProgress, BenchmarkSummary
 from taboo_arena.engine.round_engine import RoundEngine
 from taboo_arena.engine.round_session import RoundPhase, RoundStepper
 from taboo_arena.logging.run_logger import RunLogger
@@ -58,14 +58,6 @@ def _cluer_candidates(*candidates: tuple[str, str]) -> str:
 
 def _guesser_candidates(*guesses: str) -> str:
     return json.dumps({"guesses": list(guesses)})
-
-
-class _Registry:
-    def __init__(self, entries: list[ModelEntry]) -> None:
-        self._entries = {entry.id: entry for entry in entries}
-
-    def get(self, model_id: str) -> ModelEntry:
-        return self._entries[model_id]
 
 
 def test_round_stepper_matches_round_engine_behavior(sample_card, tmp_path: Path) -> None:
@@ -143,55 +135,117 @@ def test_live_round_adapter_delegates_to_canonical_stepper(sample_card, tmp_path
     assert controller.stepper.state.phase is RoundPhase.FINISHED
 
 
-def test_jobs_batch_path_uses_canonical_batch_runner(monkeypatch, sample_card, tmp_path: Path) -> None:
-    logger = RunLogger(log_root=tmp_path, console_trace=False)
+def test_jobs_benchmark_target_uses_canonical_benchmark_runner(
+    monkeypatch,
+    sample_card,
+    tmp_path: Path,
+) -> None:
     settings = AppSettings()
-    job = ActiveJob(kind="batch", logger=logger)
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    plan = BenchmarkPlan(
+        benchmark_id="benchmark_test",
+        cluer_model_id="cluer",
+        guesser_model_id="guesser",
+        judge_model_id="judge",
+        seed=settings.run.random_seed,
+        card_selection_mode="all_eligible",
+        eligible_card_count=1,
+        eligible_card_ids=[sample_card.id],
+        played_card_ids=[sample_card.id],
+        selected_categories=[str(sample_card.category_label or sample_card.source_category)],
+    )
     seen: dict[str, Any] = {}
+    updates: list[dict[str, Any]] = []
 
-    class _FakeBatchRunner:
+    class _Queue:
+        def put(self, item: dict[str, Any]) -> None:
+            updates.append(item)
+
+    class _FakeBenchmarkRunner:
         def __init__(self, engine: Any, logger: RunLogger) -> None:
             seen["engine"] = engine
             seen["logger"] = logger
 
-        def run_expanded_tasks(
+        def run_plan(
             self,
-            tasks: list[ExpandedBatchTask],
             *,
-            registry: Any,
+            plan: BenchmarkPlan,
             cards_by_id: dict[str, Any],
+            cluer_entry: Any,
+            guesser_entry: Any,
+            judge_entry: Any,
             stop_requested: Any = None,
-        ) -> list[Any]:
-            seen["tasks"] = tasks
-            seen["registry"] = registry
+            progress_callback: Any = None,
+            round_completed_callback: Any = None,
+        ) -> BenchmarkSummary:
+            del round_completed_callback
+            seen["plan"] = plan
             seen["cards_by_id"] = cards_by_id
+            seen["cluer_entry"] = cluer_entry
+            seen["guesser_entry"] = guesser_entry
+            seen["judge_entry"] = judge_entry
             seen["stop_requested"] = stop_requested
-            return ["ok"]
+            if progress_callback is not None:
+                progress_callback(
+                    BenchmarkProgress(
+                        benchmark_id=plan.benchmark_id,
+                        completed_cards=1,
+                        total_cards=1,
+                        current_card_id=sample_card.id,
+                        current_target=sample_card.target,
+                        solved_so_far=1,
+                        card_solve_rate_so_far=1.0,
+                        elapsed_seconds=0.01,
+                    )
+                )
+            return BenchmarkSummary(
+                benchmark_id=plan.benchmark_id,
+                cluer_model_id=plan.cluer_model_id,
+                guesser_model_id=plan.guesser_model_id,
+                judge_model_id=plan.judge_model_id,
+                seed=plan.seed,
+                card_selection_mode=plan.card_selection_mode,
+                requested_sample_size=plan.requested_sample_size,
+                eligible_card_count=plan.eligible_card_count,
+                played_card_ids=list(plan.played_card_ids),
+                selected_categories=list(plan.selected_categories),
+                cards_played_total=1,
+                cards_solved_total=1,
+                card_solve_rate=1.0,
+                solved_on_attempt_1_count=1,
+                solved_on_attempt_2_count=0,
+                solved_on_attempt_3_count=0,
+                clue_not_repaired_count=0,
+                max_guess_attempts_reached_count=0,
+                average_repairs_per_card=0.0,
+                average_latency_ms=12.5,
+                failure_reason_breakdown={},
+                elapsed_seconds=0.01,
+            )
 
-    monkeypatch.setattr("taboo_arena.app.jobs.BatchRunner", _FakeBatchRunner)
-    _batch_target(
-        job=job,
-        settings=settings,
-        model_manager=cast(
-            Any,
-            FakeModelManager(responses={"cluer": [], "judge": [], "guesser": []}),
-        ),
-        logger=logger,
-        registry=cast(Any, _Registry([_entry("cluer"), _entry("guesser"), _entry("judge")])),
-        tasks=[
-            {
-                "card_id": sample_card.id,
-                "cluer_model_id": "cluer",
-                "guesser_model_id": "guesser",
-                "judge_model_id": "judge",
-            }
-        ],
-        cards_by_id={sample_card.id: sample_card},
+    monkeypatch.setattr("taboo_arena.app.jobs.BenchmarkRunner", _FakeBenchmarkRunner)
+    _benchmark_process_target(
+        update_queue=_Queue(),
+        settings_payload=settings.model_dump(mode="json"),
+        run_id=logger.run_id,
+        log_root=str(logger.log_root),
+        plan_payload=plan.model_dump(mode="json"),
+        cards_payload=[sample_card.model_dump(mode="json")],
+        cluer_payload=_entry("cluer").model_dump(mode="json"),
+        guesser_payload=_entry("guesser").model_dump(mode="json"),
+        judge_payload=_entry("judge").model_dump(mode="json"),
     )
 
-    assert job.batch_results == ["ok"]
-    assert len(seen["tasks"]) == 1
-    assert isinstance(seen["tasks"][0], ExpandedBatchTask)
+    assert seen["plan"].benchmark_id == "benchmark_test"
+    assert list(seen["cards_by_id"]) == [sample_card.id]
+    assert seen["cluer_entry"].id == "cluer"
+    assert seen["guesser_entry"].id == "guesser"
+    assert seen["judge_entry"].id == "judge"
+    assert any(update["type"] == "benchmark_progress" for update in updates)
+    progress_update = next(update for update in updates if update["type"] == "benchmark_progress")
+    assert progress_update["progress"]["current_target"] == sample_card.target
+    assert any(update["type"] == "benchmark_summary" for update in updates)
+    assert updates[-1]["type"] == "completed"
 
 
 def test_run_logger_buffered_flush_preserves_output_files(tmp_path: Path) -> None:

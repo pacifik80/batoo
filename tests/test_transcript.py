@@ -45,28 +45,28 @@ def test_build_transcript_messages_shows_rejected_clues_as_struck_and_creates_ne
             {
                 "event_type": "clue_draft_generated",
                 "round_id": "round_1",
-                "attempt_no": 1,
-                "clue_repair_no": 2,
+                "attempt_no": 2,
+                "clue_repair_no": 1,
                 "visible_clue_text": "winter sleeper",
             },
             {
                 "event_type": "llm_validation_completed",
                 "round_id": "round_1",
-                "attempt_no": 1,
-                "clue_repair_no": 2,
+                "attempt_no": 2,
+                "clue_repair_no": 1,
                 "final_judge_verdict": "pass",
             },
             {
                 "event_type": "clue_accepted",
                 "round_id": "round_1",
-                "attempt_no": 1,
-                "clue_repair_no": 2,
+                "attempt_no": 2,
+                "clue_repair_no": 1,
                 "visible_clue_text": "winter sleeper",
             },
             {
                 "event_type": "guess_generated",
                 "round_id": "round_1",
-                "attempt_no": 1,
+                "attempt_no": 2,
                 "visible_guess_text": "bear",
                 "guess_match_status": "correct",
                 "guess_match_reason": "exact_match",
@@ -162,6 +162,29 @@ def test_build_transcript_messages_keeps_round_history_with_round_separators() -
         "Round • places:papua-new-guinea:0001",
         "fresh clue",
     ]
+
+
+def test_build_transcript_messages_includes_target_word_in_round_separator_when_available() -> None:
+    messages = build_transcript_messages(
+        [
+            {
+                "event_type": "round_started",
+                "round_id": "round_live",
+                "card_id": "science_and_nature-023",
+                "target": "Gravity",
+            },
+            {
+                "event_type": "clue_draft_generated",
+                "round_id": "round_live",
+                "attempt_no": 1,
+                "clue_repair_no": 1,
+                "visible_clue_text": "pull toward center",
+            },
+        ]
+    )
+
+    assert messages[0].text == "Round • science_and_nature-023 • Gravity"
+    assert messages[1].text == "pull toward center"
 
 
 def test_build_transcript_messages_carries_prompt_metadata() -> None:
@@ -420,26 +443,26 @@ def test_build_transcript_messages_rejected_repairs_create_new_public_bubbles() 
             {
                 "event_type": "clue_draft_generated",
                 "round_id": "round_1",
-                "attempt_no": 1,
-                "clue_repair_no": 2,
+                "attempt_no": 2,
+                "clue_repair_no": 1,
                 "visible_clue_text": "winter sleeper",
             },
             {
                 "event_type": "llm_validation_completed",
                 "round_id": "round_1",
-                "attempt_no": 1,
-                "clue_repair_no": 2,
+                "attempt_no": 2,
+                "clue_repair_no": 1,
                 "final_judge_verdict": "pass",
             },
             {
                 "event_type": "guess_review_started",
                 "round_id": "round_1",
-                "attempt_no": 1,
+                "attempt_no": 2,
             },
             {
                 "event_type": "guess_validation_completed",
                 "round_id": "round_1",
-                "attempt_no": 1,
+                "attempt_no": 2,
                 "final_guess_correct": True,
             },
         ]
@@ -448,7 +471,70 @@ def test_build_transcript_messages_rejected_repairs_create_new_public_bubbles() 
     assert [message.role for message in messages] == ["meta", "cluer", "judge", "cluer", "judge", "judge"]
     assert len([message for message in messages if message.role == "cluer"]) == 2
     assert len([message for message in messages if "judge-review:" in message.message_id]) == 2
-    assert len([message for message in messages if message.message_id.endswith("judge-guess:1")]) == 1
+    assert len([message for message in messages if message.message_id.endswith("judge-guess:2")]) == 1
+
+
+def test_build_transcript_messages_shows_struck_parse_failure_candidates_within_one_attempt() -> None:
+    messages = build_transcript_messages(
+        [
+            {"event_type": "round_started", "round_id": "round_1"},
+            {
+                "event_type": "clue_candidates_generated",
+                "round_id": "round_1",
+                "attempt_no": 2,
+                "clue_repair_no": 1,
+                "clue_candidate_parse_mode": "parse_failure",
+                "raw_model_output": '{"candidates":[{"angle":"type","clue":"first try"}]}',
+            },
+            {
+                "event_type": "clue_internal_retry_requested",
+                "round_id": "round_1",
+                "attempt_no": 2,
+                "clue_repair_no": 1,
+                "reason_codes": ["parse_failure"],
+            },
+            {
+                "event_type": "clue_candidates_generated",
+                "round_id": "round_1",
+                "attempt_no": 2,
+                "clue_repair_no": 2,
+                "clue_candidate_parse_mode": "parse_failure",
+                "raw_model_output": '{"candidates":[{"angle":"type","clue":"second try"}]}',
+            },
+            {
+                "event_type": "clue_internal_retry_requested",
+                "round_id": "round_1",
+                "attempt_no": 2,
+                "clue_repair_no": 2,
+                "reason_codes": ["parse_failure"],
+            },
+            {
+                "event_type": "clue_candidates_generated",
+                "round_id": "round_1",
+                "attempt_no": 2,
+                "clue_repair_no": 3,
+                "clue_candidate_parse_mode": "parse_failure",
+                "raw_model_output": '{"candidates":[{"angle":"type","clue":"third try"}]}',
+            },
+            {
+                "event_type": "clue_internal_retry_requested",
+                "round_id": "round_1",
+                "attempt_no": 2,
+                "clue_repair_no": 3,
+                "reason_codes": ["parse_failure"],
+            },
+            {
+                "event_type": "round_finished",
+                "round_id": "round_1",
+                "terminal_reason": "clue_not_repaired",
+            },
+        ]
+    )
+
+    cluer_message = next(message for message in messages if message.role == "cluer")
+    assert [line.text for line in cluer_message.public_lines] == ["first try", "second try", "third try"]
+    assert all(line.is_struck_out for line in cluer_message.public_lines)
+    assert cluer_message.text == "third try"
 
 
 def test_merge_transcript_optional_text_treats_none_as_missing() -> None:

@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
+from taboo_arena.app.preferences import (
+    PersistedAppPreferences,
+    load_app_preferences,
+    persist_session_preferences,
+)
 from taboo_arena.app.state import (
     applied_generation_params,
     apply_generation_widget_state,
@@ -192,3 +198,57 @@ def test_initialize_session_state_creates_session_seed_and_rng() -> None:
     assert isinstance(state["random_seed"], int)
     assert int(state["random_seed"]) > 0
     assert isinstance(state["app_randomizer"], random.Random)
+
+
+def test_initialize_session_state_uses_persisted_preferences() -> None:
+    settings = AppSettings()
+    preferences = PersistedAppPreferences.from_settings(settings)
+    preferences.max_guess_attempts = 5
+    preferences.max_clue_repairs = 4
+    preferences.guesser_hidden_retry_budget = 1
+    preferences.cluer_model_id = "saved-cluer"
+    preferences.guesser_model_id = "saved-guesser"
+    preferences.judge_model_id = "saved-judge"
+    preferences.cluer_temperature = 0.55
+    preferences.cluer_generation_dirty = True
+    preferences.cluer_generation_source_model_id = "saved-cluer"
+
+    state: dict[str, object] = {}
+    initialize_session_state(state, settings, preferences)
+
+    assert state["max_guess_attempts"] == 5
+    assert state["max_clue_repairs"] == 4
+    assert state["guesser_hidden_retry_budget"] == 1
+    assert state["cluer_model_id"] == "saved-cluer"
+    assert state["guesser_model_id"] == "saved-guesser"
+    assert state["judge_model_id"] == "saved-judge"
+    assert state["cluer_temperature"] == 0.55
+    assert state["cluer_generation_dirty"] is True
+    assert state["cluer_generation_source_model_id"] == "saved-cluer"
+
+
+def test_persisted_preferences_roundtrip_from_session_state(tmp_path: Path) -> None:
+    state: dict[str, object] = {}
+    initialize_session_state(state, AppSettings())
+    state["max_guess_attempts"] = 6
+    state["max_clue_repairs"] = 2
+    state["guesser_hidden_retry_budget"] = 3
+    state["cluer_model_id"] = "cluer-last"
+    state["guesser_model_id"] = "guesser-last"
+    state["judge_model_id"] = "judge-last"
+    state["cluer_temperature"] = 0.61
+    state["cluer_generation_dirty"] = True
+    state["cluer_generation_source_model_id"] = "cluer-last"
+
+    persist_session_preferences(state, preferences_path=tmp_path / "prefs.yaml")
+    loaded = load_app_preferences(AppSettings(), preferences_path=tmp_path / "prefs.yaml")
+
+    assert loaded.max_guess_attempts == 6
+    assert loaded.max_clue_repairs == 2
+    assert loaded.guesser_hidden_retry_budget == 3
+    assert loaded.cluer_model_id == "cluer-last"
+    assert loaded.guesser_model_id == "guesser-last"
+    assert loaded.judge_model_id == "judge-last"
+    assert loaded.cluer_temperature == 0.61
+    assert loaded.cluer_generation_dirty is True
+    assert loaded.cluer_generation_source_model_id == "cluer-last"

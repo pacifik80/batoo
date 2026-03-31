@@ -33,26 +33,29 @@ Each round uses one normalized card with:
 - `source_ref`
 - `source_commit`
 
-There are exactly 3 guess attempts per round.
+There are exactly 3 public attempts per round by default.
 
-For each guess attempt:
+For each public attempt:
 
-1. The Cluer proposes one clue draft.
-2. The clue is checked by the deterministic validator.
-3. The clue is checked again by the LLM Judge.
-4. If the clue fails, the Cluer gets hidden repair attempts.
-5. If a clue is accepted, the Guesser returns exactly one guess.
-6. If the guess matches the target or an alias, the round succeeds.
-7. After 3 failed guesses, the round ends with `max_guess_attempts_reached`.
+1. The Cluer may use hidden internal repairs to prepare a judge-ready clue.
+2. The prepared clue is checked by the deterministic validator.
+3. The prepared clue is checked again by the LLM Judge.
+4. Sending that clue to the Judge consumes one public attempt.
+5. If the clue is accepted, the Guesser may use hidden retries to produce one visible guess.
+6. If the guess matches the target, the round succeeds.
+7. If the Judge rejects the clue, the next clue review is the next public attempt.
+8. After the configured attempt limit is exhausted, the round ends with `max_attempts_reached`.
 
-## Guess Attempts vs Hidden Clue Repairs
+## Public Attempts vs Hidden Repairs
 
 These are intentionally different:
 
-- Guess attempts are capped at 3.
-- Hidden clue repairs do not consume guess attempts.
-- Max clue repairs per guess attempt defaults to 3 and is configurable.
-- If no clue is repaired successfully within the repair budget, the round ends with `clue_not_repaired`.
+- Public attempts are capped at 3 by default and consume budget only when the Cluer sends a clue to the Judge.
+- Hidden cluer repairs do not consume attempts.
+- Hidden guesser retries do not consume attempts.
+- Max clue repairs per attempt defaults to 3 and is configurable.
+- Guesser hidden retry budget defaults to 2 and is configurable.
+- If the Cluer cannot prepare a judge-ready clue within the repair budget, the round ends with `clue_not_repaired`.
 
 This separation is important for benchmarking. It lets you measure clue quality and clue recoverability independently from guessing skill.
 

@@ -551,6 +551,10 @@ def apply_theme() -> None:
           white-space: pre-wrap;
           word-break: break-word;
         }
+        .transcript-text-stack {
+          display: grid;
+          gap: 0.34rem;
+        }
         .transcript-text-struck {
           text-decoration: line-through;
           text-decoration-thickness: 1.5px;

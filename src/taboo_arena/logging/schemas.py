@@ -15,6 +15,7 @@ class RoundSummaryRecord(BaseModel):
     solved: bool
     solved_on_attempt: int | None = None
     total_guess_attempts_used: int
+    total_visible_guesses_made: int = 0
     total_clue_repairs: int
     first_clue_passed_without_repair: bool
     clue_repaired_successfully: bool
@@ -24,4 +25,3 @@ class RoundSummaryRecord(BaseModel):
     guesser_model_id: str
     judge_model_id: str
     total_latency_ms: float
-

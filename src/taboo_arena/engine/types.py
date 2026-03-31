@@ -45,7 +45,7 @@ class GuessTrace:
 
 @dataclass(slots=True)
 class AttemptTrace:
-    """All events for a single guess attempt."""
+    """All events for a single public clue attempt."""
 
     attempt_no: int
     repairs: list[RepairTrace] = field(default_factory=list)

@@ -92,12 +92,45 @@ class SessionFacade:
         self._state["resource_last_sample_at"] = float(value)
 
     @property
-    def start_batch_clicked(self) -> bool:
-        return bool(self._state.get("start_batch_clicked", False))
+    def start_benchmark_clicked(self) -> bool:
+        return bool(self._state.get("start_benchmark_clicked", False))
 
-    @start_batch_clicked.setter
-    def start_batch_clicked(self, value: bool) -> None:
-        self._state["start_batch_clicked"] = bool(value)
+    @start_benchmark_clicked.setter
+    def start_benchmark_clicked(self, value: bool) -> None:
+        self._state["start_benchmark_clicked"] = bool(value)
+
+    @property
+    def benchmark_plan(self) -> Any:
+        return self._state.get("benchmark_plan")
+
+    @benchmark_plan.setter
+    def benchmark_plan(self, value: Any) -> None:
+        self._state["benchmark_plan"] = value
+
+    @property
+    def benchmark_progress(self) -> Any:
+        return self._state.get("benchmark_progress")
+
+    @benchmark_progress.setter
+    def benchmark_progress(self, value: Any) -> None:
+        self._state["benchmark_progress"] = value
+
+    @property
+    def benchmark_summary(self) -> Any:
+        return self._state.get("benchmark_summary")
+
+    @benchmark_summary.setter
+    def benchmark_summary(self, value: Any) -> None:
+        self._state["benchmark_summary"] = value
+
+    @property
+    def benchmark_error(self) -> str | None:
+        value = self._state.get("benchmark_error")
+        return None if value is None else str(value)
+
+    @benchmark_error.setter
+    def benchmark_error(self, value: str | None) -> None:
+        self._state["benchmark_error"] = value
 
     @property
     def app_randomizer(self) -> random.Random:
