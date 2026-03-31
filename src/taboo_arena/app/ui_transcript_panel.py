@@ -57,15 +57,15 @@ def render_transcript_panel_content(
     transcript_messages = build_transcript_messages(
         transcript_source_events(session=session, current_logger=logger)
     )
-    if current_result is not None:
-        render_result_banner(current_result)
     if not transcript_messages:
+        if current_result is not None:
+            render_result_banner(current_result)
         if active_run_present:
             st.info(active_transcript_placeholder(logger))
         elif current_result is None:
             st.info("Press Start to run the selected card here.")
         return
-    render_transcript_messages(transcript_messages)
+    render_transcript_messages(transcript_messages, result=current_result)
 
 
 def transcript_source_events(
@@ -139,6 +139,11 @@ def archive_current_logger_for_transcript(session: SessionFacade) -> None:
 
 def render_result_banner(result: Any) -> None:
     """Render the final result summary above the transcript."""
+    st.markdown(result_banner_html(result), unsafe_allow_html=True)
+
+
+def result_banner_html(result: Any) -> str:
+    """Return the final result summary banner HTML."""
     if result.solved:
         text = f"Solved on attempt {result.solved_on_attempt}"
         css_class = "result-banner result-success"
@@ -148,15 +153,24 @@ def render_result_banner(result: Any) -> None:
     else:
         text = f"Failed after {int(result.total_guess_attempts_used)} attempts"
         css_class = "result-banner result-fail"
-    st.markdown(f"<div class='{css_class}'>{text}</div>", unsafe_allow_html=True)
+    return f"<div class='{css_class}'>{html.escape(text)}</div>"
 
 
-def render_transcript_messages(messages: list[TranscriptMessage]) -> None:
+def render_transcript_messages(messages: list[TranscriptMessage], *, result: Any | None = None) -> None:
     """Render transcript messages using the shared chat bubble layout."""
     if not messages:
         return
+    banner_html = "" if result is None else result_banner_html(result)
     transcript_html = "".join(transcript_message_html(message) for message in messages)
-    st.markdown(f"<div class='transcript-wrap'>{transcript_html}</div>", unsafe_allow_html=True)
+    st.markdown(
+        (
+            "<div class='transcript-scroll-region'>"
+            f"{banner_html}"
+            f"<div class='transcript-wrap'>{transcript_html}</div>"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def transcript_message_html(message: TranscriptMessage) -> str:

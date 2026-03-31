@@ -356,6 +356,10 @@ def apply_theme() -> None:
           padding: 0.58rem 0.62rem;
           font-size: 0.94rem;
         }
+        .st-key-bottom_transcript_panel,
+        .st-key-bottom_transcript_panel[data-testid="stVerticalBlockBorderWrapper"] {
+          overflow: hidden;
+        }
         .pulse-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -468,11 +472,19 @@ def apply_theme() -> None:
           color: var(--muted);
           font-size: 0.83rem;
         }
+        .transcript-scroll-region {
+          height: calc(var(--bottom-panel-height) - 2.1rem);
+          max-height: calc(var(--bottom-panel-height) - 2.1rem);
+          overflow-y: auto;
+          overflow-x: hidden;
+          scrollbar-gutter: stable;
+          padding-top: 0.25rem;
+          padding-right: 0.12rem;
+        }
         .transcript-wrap {
           display: flex;
           flex-direction: column;
           gap: 0.42rem;
-          padding-top: 0.25rem;
         }
         .transcript-row {
           display: flex;
@@ -662,6 +674,10 @@ def apply_theme() -> None:
         @media (max-width: 1100px) {
           :root {
             --bottom-panel-height: max(22rem, calc(100dvh - 16.75rem));
+          }
+          .transcript-scroll-region {
+            height: calc(var(--bottom-panel-height) - 1.9rem);
+            max-height: calc(var(--bottom-panel-height) - 1.9rem);
           }
           .pulse-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));

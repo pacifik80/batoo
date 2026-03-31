@@ -844,6 +844,9 @@ class RoundStepper:
             selected_match_result = self.guess_canonicalizer.match("", state.card.target)
             selected_match_result.reason = "no_valid_new_guess"
 
+        visible_guess_text = "" if selected_guess_text_raw == "(no valid guess)" else selected_guess_text_raw
+        state.current_selected_guess_candidate = selected_guess_text_raw
+        state.current_guess_match_status = str(selected_match_result.status)
         self.logger.emit(
             "guess_review_started",
             batch_id=state.batch_id,
@@ -851,6 +854,14 @@ class RoundStepper:
             card_id=state.card.id,
             attempt_no=state.attempt_no,
             guess_internal_cycle_no=state.guess_internal_cycle_no,
+            visible_guess_text=visible_guess_text,
+            guess_text_raw=selected_guess_text_raw,
+            guess_match_status=str(selected_match_result.status),
+            guess_match_reason=selected_match_result.reason,
+            guess_match_warnings=list(selected_match_result.warnings),
+            guess_match_candidates=selected_match_result.analysis.candidate_spans,
+            guess_hidden_retry_count=hidden_retry_count,
+            guess_shortlist_candidates=guess_shortlist,
             role="judge",
             state="verifying_guess",
             cluer_model_id=state.cluer_entry.id,
@@ -897,9 +908,6 @@ class RoundStepper:
 
         final_guess_correct = bool(selected_match_result.is_correct)
         guess_judge_disagreement = bool(guess_judge_result.correct) != final_guess_correct
-        state.current_selected_guess_candidate = selected_guess_text_raw
-        state.current_guess_match_status = str(selected_match_result.status)
-        visible_guess_text = "" if selected_guess_text_raw == "(no valid guess)" else selected_guess_text_raw
         if visible_guess_text:
             state.visible_guess_count += 1
         self.logger.emit(
@@ -920,6 +928,8 @@ class RoundStepper:
             guess_judge_reason_codes=list(guess_judge_result.reason_codes),
             guess_judge_warnings=list(guess_judge_result.warnings),
             guess_judge_matched_surface_forms=list(guess_judge_result.matched_surface_forms),
+            guess_hidden_retry_count=hidden_retry_count,
+            guess_shortlist_candidates=guess_shortlist,
             judge_disagreement=guess_judge_disagreement,
             final_guess_correct=final_guess_correct,
             prompt_template_id=guess_judge_prompt_template_id,

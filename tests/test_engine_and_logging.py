@@ -340,6 +340,32 @@ def test_round_engine_passes_only_visible_clue_text_to_guesser(sample_card, tmp_
     assert raw_cluer_payload not in message_text
 
 
+def test_round_engine_emits_selected_guess_before_judge_verdict(sample_card, tmp_path: Path) -> None:
+    logger = RunLogger(log_root=tmp_path, console_trace=False)
+    manager = FakeModelManager(
+        responses={
+            "cluer": [_cluer_candidates(("use", "forest giant"))],
+            "judge": [CLUE_ALLOW, GUESS_INCORRECT],
+            "guesser": [_guesser_candidates("Wolf", "Fox")],
+        }
+    )
+    settings = RunSettings(max_guess_attempts=1)
+    engine = RoundEngine(model_manager=manager, logger=logger, settings=settings)
+
+    result = engine.play_round(
+        card=sample_card,
+        cluer_entry=_entry("cluer"),
+        guesser_entry=_entry("guesser"),
+        judge_entry=_entry("judge"),
+    )
+
+    assert result.solved is False
+    review_event = next(event for event in logger.events if event["event_type"] == "guess_review_started")
+    assert review_event["visible_guess_text"] == "Wolf"
+    assert review_event["guess_text_raw"] == "Wolf"
+    assert review_event["guess_hidden_retry_count"] == 0
+
+
 def test_round_engine_passes_previous_wrong_guesses_as_guesser_guard_phrases(
     sample_card,
     tmp_path: Path,

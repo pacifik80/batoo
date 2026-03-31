@@ -513,6 +513,33 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "guess_review_started":
+            guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
+            review_guess_visible = _optional_text(event.get("visible_guess_text"))
+            review_guess_raw = _optional_text(event.get("guess_text_raw"))
+            if review_guess_visible or review_guess_raw:
+                review_guess_text = _guess_public_text(event)
+                guess_message.public_text = review_guess_text
+                guess_message.status_label = None
+                guess_message.tone = "guess"
+                _append_timeline(guess_message, "visible guess selected")
+                _set_debug_section(
+                    guess_message,
+                    "Summary",
+                    [
+                        _debug_field("Selected visible guess", _optional_text(event.get("visible_guess_text"))),
+                        _debug_field("Match status", _optional_text(event.get("guess_match_status"))),
+                        _debug_field("Match reason", _optional_text(event.get("guess_match_reason"))),
+                        _debug_field("Hidden retry count", _optional_text(event.get("guess_hidden_retry_count"))),
+                    ],
+                    summary="Selected guess submitted for judge verification.",
+                )
+                _set_debug_section(
+                    guess_message,
+                    "Shortlist",
+                    [
+                        _debug_field("Guess shortlist", _line_list(event.get("guess_shortlist_candidates"))),
+                    ],
+                )
             judge_message = _ensure_guess_judge_message(
                 messages,
                 guess_judge_indexes,
@@ -524,6 +551,44 @@ def build_transcript_messages(events: list[dict[str, Any]]) -> list[TranscriptMe
             continue
 
         if event_type == "guess_validation_completed":
+            guess_message = _ensure_guess_message(messages, guess_indexes, round_id, attempt_no)
+            completed_guess_visible = _optional_text(event.get("visible_guess_text"))
+            completed_guess_raw = _optional_text(event.get("guess_text_raw"))
+            if completed_guess_visible or completed_guess_raw:
+                completed_guess_text = _guess_public_text(event)
+                guess_message.public_text = completed_guess_text
+                guess_message.tone = "success" if bool(event.get("final_guess_correct", False)) else "guess"
+                guess_message.status_label = None
+                _append_timeline(guess_message, "visible guess selected")
+                _append_timeline(guess_message, "canonicalization complete")
+                _set_debug_section(
+                    guess_message,
+                    "Summary",
+                    [
+                        _debug_field("Selected visible guess", _optional_text(event.get("visible_guess_text"))),
+                        _debug_field("Match status", _optional_text(event.get("guess_match_status"))),
+                        _debug_field("Match reason", _optional_text(event.get("guess_match_reason"))),
+                        _debug_field("Hidden retry count", _optional_text(event.get("guess_hidden_retry_count"))),
+                    ],
+                    summary="Visible guess committed before the round advances.",
+                )
+                _set_debug_section(
+                    guess_message,
+                    "Shortlist",
+                    [
+                        _debug_field("Guess shortlist", _line_list(event.get("guess_shortlist_candidates"))),
+                    ],
+                )
+                _set_debug_section(
+                    guess_message,
+                    "Canonicalization",
+                    [
+                        _debug_field(
+                            "Canonicalization",
+                            _format_canonicalization_debug(event),
+                        ),
+                    ],
+                )
             judge_message = _ensure_guess_judge_message(
                 messages,
                 guess_judge_indexes,

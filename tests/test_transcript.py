@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 from taboo_arena.app.transcript import (
@@ -10,7 +11,7 @@ from taboo_arena.app.transcript import (
     latest_round_events,
     merge_transcript_event_sources,
 )
-from taboo_arena.app.ui_transcript_panel import transcript_message_html
+from taboo_arena.app.ui_transcript_panel import render_transcript_messages, transcript_message_html
 
 
 def test_build_transcript_messages_shows_rejected_clues_as_struck_and_creates_new_repair_bubbles() -> None:
@@ -537,6 +538,34 @@ def test_build_transcript_messages_shows_struck_parse_failure_candidates_within_
     assert cluer_message.text == "third try"
 
 
+def test_build_transcript_messages_shows_visible_guess_while_judge_reviews_it() -> None:
+    messages = build_transcript_messages(
+        [
+            {
+                "event_type": "round_started",
+                "round_id": "round_1",
+            },
+            {
+                "event_type": "guess_review_started",
+                "round_id": "round_1",
+                "attempt_no": 1,
+                "visible_guess_text": "truck",
+                "guess_text_raw": "truck",
+                "guess_match_status": "incorrect",
+                "guess_match_reason": "target_absent",
+                "guess_hidden_retry_count": 0,
+                "guess_shortlist_candidates": ["truck", "car"],
+            },
+        ]
+    )
+
+    assert [message.role for message in messages] == ["meta", "guesser", "judge"]
+    guess_message = next(message for message in messages if message.role == "guesser")
+    judge_message = next(message for message in messages if message.role == "judge")
+    assert guess_message.text == "truck"
+    assert judge_message.status_label == "verifying guess"
+
+
 def test_merge_transcript_optional_text_treats_none_as_missing() -> None:
     messages = build_transcript_messages(
         [
@@ -710,3 +739,36 @@ def test_transcript_message_html_renders_status_timeline_and_debug_details() -> 
     assert "Debug" in html
     assert "Timeline" in html
     assert "Selected angle" in html
+
+
+def test_render_transcript_messages_wraps_feed_in_scroll_region(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def _capture_markdown(body: str, *, unsafe_allow_html: bool) -> None:
+        captured["body"] = body
+        captured["unsafe_allow_html"] = unsafe_allow_html
+
+    monkeypatch.setattr("taboo_arena.app.ui_transcript_panel.st.markdown", _capture_markdown)
+
+    render_transcript_messages(
+        [
+            TranscriptMessage(
+                role="cluer",
+                label="Cluer",
+                public_text="winter sleeper",
+                tone="accepted",
+                alignment="left",
+            )
+        ],
+        result=SimpleNamespace(
+            solved=True,
+            solved_on_attempt=2,
+            terminal_reason=None,
+            total_guess_attempts_used=2,
+        ),
+    )
+
+    assert captured["unsafe_allow_html"] is True
+    assert "transcript-scroll-region" in captured["body"]
+    assert "result-banner result-success" in captured["body"]
+    assert "winter sleeper" in captured["body"]
